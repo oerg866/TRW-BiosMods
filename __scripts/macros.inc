@@ -26,3 +26,25 @@ PCIDeviceFuncDev    db ?
 RegMask             dw ?
 Value               dw ?
 AwardChipsetRegisters ends
+
+MenuItem            struc ; (sizeof=0x19, mappedto_17)
+ItemStatus          dw ?
+ItemName            dw ?                    ; offset
+ChipsetReg          dw ?
+ChipsetRegMask      dw ?
+CMOSLoc             db ?
+CMOSMask            dw ?
+FirstItemString     dw ?                    ; offset
+MinVal              dw ?
+MaxVal              dw ?
+ItemX               db ?
+ItemY               db ?
+PowerOnDefault      dw ?
+SetupDefault        dw ?
+HelpString          dw ?                    ; offset
+MenuItem            ends
+
+LBL MACRO NAME, OFF
+    ORG OFF
+NAME:
+            ENDM
