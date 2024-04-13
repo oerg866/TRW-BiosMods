@@ -74,6 +74,13 @@ ProcessConfigRegsLoop:                  ; CODE XREF: BIOS_F:07B9↓j
     LBL aDisabled_2, 3D5Dh
     LBL aEnabled_0, 3D54h
 
+    ORG NewChipsetRegisters_End
+newCBurstOpt:
+    db '3-1-1-1',0
+    db '2-1-1-1',0
+    db '3-2-2-2',0
+    db '2-2-2-2',0
+
     ORG 4EF1h
 
     ; "Auto Configuration      : " ; "Disable"
@@ -84,10 +91,17 @@ ProcessConfigRegsLoop:                  ; CODE XREF: BIOS_F:07B9↓j
     MenuItem <4002h,    offset aLbdSamplePoint,     2858h,  1,      41h, 8,     offset aEndOfT3,    0, 1, 2, 7, 0, 0, offset aAvailableOptio> 
     ; "Cache Write Cycle       : "; "3 CCLK"
     MenuItem <4002h,    offset aCacheWriteCycl,     2843h,  8,      41h, 10h,   offset a3Cclk_0,    0, 1, 2, 13h, 0, 10h, offset aAvailableOptio> 
+
+    ; NEW single option to replace dual separate option, similar to ASUS BIOS
+
+    ; "Cache Burst Read Cycle  : " ; "3-1-1-1"
+    MenuItem <4002h,    offset aCacheBurstRead,     2843h,  6,      41h, 60h,   offset newCBurstOpt,0, 3, 2, 14h, 4, 4, offset aAvailableOptio>
+    MenuItem <000Ah,    0,     0FFFFh, 0,      0, 0,   0,    0, 0, 0, 0, 0, 0, 0> 
+ 
     ; "Cache Burst Read Cycle  : "; "1 CCLK"
-    MenuItem <4002h,    offset aCacheBurstRead,     2843h,  4,      41h, 20h,   offset a1Cclk_2,    0, 1, 2, 14h, 4, 0, offset aAvailableOptio> 
+;   MenuItem <4002h,    offset aCacheBurstRead,     2843h,  4,      41h, 20h,   offset a1Cclk_2,    0, 1, 2, 14h, 4, 0, offset aAvailableOptio> 
      ; "L2 Cache/DRAM Cycle WS  : "; "3 CCLK"
-    MenuItem <4002h,    offset aL2CacheDramCyc,     2843h,  2,      41h, 40h,   offset a3Cclk_1,    0, 1, 2, 15h, 0, 40h, offset aAvailableOptio> 
+;   MenuItem <4002h,    offset aL2CacheDramCyc,     2843h,  2,      41h, 40h,   offset a3Cclk_1,    0, 1, 2, 15h, 0, 40h, offset aAvailableOptio> 
      ; "DRAM RAS to CAS Delay   : "; "3 CCLK"
 ;   MenuItem <400Ah,    offset aDramRasToCasDe,     2841h,  8,      41h, 80h,   offset a3Cclk,      0, 1, 2, 0Dh, 0, 0, offset aAvailableOptio> 
     MenuItem <4002h,    offset aDramRasToCasDe,     2841h,  8,      41h, 80h,   offset a3Cclk,      0, 1, 2, 0Fh, 0, 0, offset aAvailableOptio> 
