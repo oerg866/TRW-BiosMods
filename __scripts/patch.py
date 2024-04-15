@@ -365,7 +365,7 @@ if bios_filename is None:
 with open(bios_filename, 'rb') as bios_file:
     bios_data = bytearray(bios_file.read())
 
-if args.bios_extract is not None:
+if args.bios_extract == True:
     extract_lzh_all(args.bios_extract, bios_data)
     exit()
 
@@ -376,7 +376,7 @@ if output_filename is None:
 
 with open(output_filename, 'wb') as patched_file:
 
-    if args.removeheader is not None:
+    if args.removeheader == True:
         bios_data = bios_data[0x200:]
 
     if args.blob is not None:

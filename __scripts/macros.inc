@@ -44,7 +44,46 @@ SetupDefault        dw ?
 HelpString          dw ?                    ; offset
 MenuItem            ends
 
+MenuHeader      struc ; (sizeof=0x6, mappedto_11)                                                                                                     ; XREF: BIOS_F:PageOffset/r
+                                                                                                                                                      ; BIOS_F:112F/r ...
+PageStart       dw ?                                                                                                                                  ; offset (000F0000)
+PageEnd         dw ?                                                                                                                                  ; offset (000F0000)
+StartupString   dw ?                                                                                                                                  ; offset (000F0000)
+MenuHeader      ends
+
 LBL MACRO NAME, OFF
     ORG OFF
 NAME:
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; AWARD BIOS String stuff
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+V_DONE          EQU 0
+V_DONE1         EQU 1
+V_BORDER        EQU 2
+V_CLEAR         EQU 3
+V_STRSHOW       EQU 4
+V_POS           EQU 5
+V_HILITE        EQU 6
+V_REVERSE       EQU 7
+V_NORMAL        EQU 8
+V_BLINK         EQU 9
+V_WARN          EQU 0Ah
+V_NEWLINE       EQU 0Bh
+V_ADDX          EQU 0Ch
+V_SUBX          EQU 0Dh
+V_ADDY          EQU 0Eh
+V_SUBY          EQU 0Fh
+V_CALLROUTINE   EQU 10h
+
+S_StrShow       struc ; (sizeof=0x5, mappedto_4)                                ; XREF: BIOS_F:62D9/r
+                                                                                ; BIOS_F:62E5/r ...
+field_0         db V_STRSHOW
+x               db ?
+y               db ?
+string          dw ?                                                            ; offset
+S_StrShow       ends
+
             ENDM
