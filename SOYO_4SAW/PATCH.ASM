@@ -12,12 +12,12 @@ SEG_15 SEGMENT USE16 PARA PUBLIC 'CODE'
 ;-----------------------------------------------------
 ; Modify version string
     org 0E0C1h
-    db 'theretroweb.com - Soyo 4SAW Mod Bios v0.94 - by oerg866',0
+    db 'theretroweb.com - Soyo 4SAW Mod Bios v0.96 - by oerg866',0
 
 ;-----------------------------------------------------
 ; Modify POST string
     org 0EC71h
-    db '04/15/24-SiS-496-497-TRW-2A4IBS29C-00'
+    db '04/16/24-SiS-496-497-TRW-2A4IBS29C-00'
 
 ; Modify setup menu string
     org 02AE4h
