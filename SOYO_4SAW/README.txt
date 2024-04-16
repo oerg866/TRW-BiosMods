@@ -4,6 +4,12 @@ https://theretroweb.com/motherboards/s/soyo-sy-4saw
 
 BIOS mod by Eric Voirin
 
+-<V0.96>--------------------------------------------
+* Remove buggy chipset init table again
+  - Fixes IDE not working when PCI devices are plugged
+* Fix flipped bit in PCI IRQ CMOS bitmask
+  - Fixes broken PCI IRQ assignments
+
 -<V0.94>--------------------------------------------
 
 * CHIPSET FEATURES SETUP
