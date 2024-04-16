@@ -12,111 +12,88 @@ SEG_15 SEGMENT USE16 PARA PUBLIC 'CODE'
     ORG 4EF1h
 
 MenuItems_ChipsetFeaturesSetup:
-    ; "Auto Configuration      : " ; "Disable"
-    MenuItem <0,        offset aAutoConfigurat,     0FFFFh, 1,      41h, 1,     offset aDisable_0,  0, 1, 2, 6, 0, 1, offset aAvailableOptio>
-    ; "ISA Bus Clock           : " ; "7.159MHz"
-    MenuItem <4002h,    offset aIsaBusClock,        70h,    0C0h,   41h, 6,     offset a7159mhz,    0, 2, 2, 7, 0, 0, offset aAvailableOptio> 
-    ; "LBD# Sample Point       : " ; "End of T3"
-    MenuItem <4002h,    offset aLbdSamplePoint,     2858h,  1,      41h, 8,     offset aEndOfT3,    0, 1, 2, 8, 0, 0, offset aAvailableOptio> 
-    ; "Cache Write Cycle       : "; "3 CCLK"
-    MenuItem <4002h,    offset aCacheWriteCycl,     2843h,  8,      41h, 10h,   offset a3Cclk_0,    0, 1, 2, 13h, 0, 10h, offset aAvailableOptio> 
+    MenuItem <0,        offset aAutoConfigurat,     0FFFFh, 1,      41h, 1,     offset aDisable_0,  0, 1, 2, 6, 0, 1, offset aAvailableOptio> ; "Auto Configuration      : " ; "Disable"
+    MenuItem <4002h,    offset aIsaBusClock,        70h,    0C0h,   41h, 6,     offset a7159mhz,    0, 2, 2, 7, 0, 0, offset aAvailableOptio> ; "ISA Bus Clock           : " ; "7.159MHz"
+    MenuItem <4002h,    offset aLbdSamplePoint,     2858h,  1,      41h, 8,     offset aEndOfT3,    0, 1, 2, 8, 0, 0, offset aAvailableOptio> ; "LBD# Sample Point       : " ; "End of T3"
+    MenuItem <4002h,    offset aCacheWriteCycl,     2843h,  8,      41h, 10h,   offset a3Cclk_0,    0, 1, 2, 13h, 0, 10h, offset aAvailableOptio> ; "Cache Write Cycle       : "; "3 CCLK"
 
     ; NEW single option to replace dual separate option, similar to ASUS BIOS
+    MenuItem <4002h,    offset aCacheBurstRead,     2843h,  6,      41h, 60h,   offset newCBurstOpt,0, 3, 2, 14h, 4, 4, offset aAvailableOptio> ; "Cache Burst Read Cycle  : " ; "3-1-1-1"
 
-    ; "Cache Burst Read Cycle  : " ; "3-1-1-1"
-    MenuItem <4002h,    offset aCacheBurstRead,     2843h,  6,      41h, 60h,   offset newCBurstOpt,0, 3, 2, 14h, 4, 4, offset aAvailableOptio>
-
-    ; Delete 2nd option
+    ; Delete 2nd option to keep table order somewhat intact
     MenuItem <000Ah,    0,     0FFFFh, 0,      0, 0,   0,    0, 0, 0, 0, 0, 0, 0>
     
-    
-    ; "Cache Burst Read Cycle  : "; "1 CCLK"
-;   MenuItem <4002h,    offset aCacheBurstRead,     2843h,  4,      41h, 20h,   offset a1Cclk_2,    0, 1, 2, 14h, 4, 0, offset aAvailableOptio> 
-     ; "L2 Cache/DRAM Cycle WS  : "; "3 CCLK"
-;   MenuItem <4002h,    offset aL2CacheDramCyc,     2843h,  2,      41h, 40h,   offset a3Cclk_1,    0, 1, 2, 15h, 0, 40h, offset aAvailableOptio> 
-     ; "DRAM RAS to CAS Delay   : "; "3 CCLK"
-;   MenuItem <400Ah,    offset aDramRasToCasDe,     2841h,  8,      41h, 80h,   offset a3Cclk,      0, 1, 2, 0Dh, 0, 0, offset aAvailableOptio> 
-    MenuItem <4002h,    offset aDramRasToCasDe,     2841h,  8,      41h, 80h,   offset a3Cclk,      0, 1, 2, 0Fh, 0, 0, offset aAvailableOptio> 
-    ; "DRAM Write Cycle        : "; "1 WS"
-    MenuItem <4002h,    offset aDramWriteCycle,     2841h,  4,      42h, 1,     offset a1Ws,        0, 1, 2, 0Ch, 0, 0, offset aAvailableOptio> 
-    ; "DRAM Write CAS Pulse    : "; "2 CCLK"
-    MenuItem <4002h,    offset aDramWriteCasPu,     2841h,  2,      42h, 2,     offset a2Cclk_0,    0, 1, 2, 0Dh, 0, 0, offset aAvailableOptio> 
-    ; "DRAM CAS Precharge Time : "; "2 CCLK"
-;   MenuItem <400Ah,    offset aDramCasPrechar,     2841h,  1,      42h, 4,     offset a2Cclk_1,    0, 1, 2, 10h, 0, 0, offset aAvailableOptio>
-    MenuItem <4002h,    offset aDramCasPrechar,     2841h,  1,      42h, 4,     offset a2Cclk_1,    0, 1, 2, 10h, 0, 0, offset aAvailableOptio>
-    ; "DRAM RAS to MA Delay    : "; "2 CCLK"
-;   MenuItem <400Ah,    offset aDramRasToMaDel,     2843h,  10h,    42h, 8,     offset a2Cclk_2,    0, 1, 2, 11h, 0, 0, offset aAvailableOptio>
-    MenuItem <4002h,    offset aDramRasToMaDel,     2843h,  10h,    42h, 8,     offset a2Cclk_2,    0, 1, 2, 9,   0, 0, offset aAvailableOptio>
-    ; "DRAM Speed              : "; "Slowest"
-    MenuItem <4002h,    offset aDramSpeed,          2840h,  3,      42h, 30h,   offset aSlowest,    0, 3, 2, 0Bh, 2, 20h, offset aAvailableOptio> 
-    ; "DRAM Slow Refresh       : "; "Disable"
-;    MenuItem <0Ah,      offset aDramSlowRefres,     2841h,  10h,    42h, 40h,   offset aDisable_0,  0, 1, 2, 13h, 0, 0, offset aAvailableOptio> 
-    MenuItem <2,        offset aDramSlowRefres,     2841h,  10h,    42h, 40h,   offset aDisable_0,  0, 1, 2, 0Ah, 0, 0, offset aAvailableOptio> 
-    ; "CPU Internal Cache      : "; "Write Thru"
-    MenuItem <2,        offset aCpuInternalCac_0,   0FFFFh, 1,      42h, 80h,   offset aWriteThru,  0, 1, 2, 0Eh, 0, 0, offset aAvailableOptio> 
-    ; "CPU Burst Write         : "; "Disable"
-    MenuItem <2,        offset aCpuBurstWrite,      0FFFFh, 40h,    43h, 1,     offset aDisable_0,  0, 1, 2, 11h, 0, 0, offset aAvailableOptio> 
-    ; "L2 Cache Policy         : "; "Write Thru"
-    MenuItem <2,        offset aL2CachePolicy,      0FFFFh, 1,      43h, 2,     offset aWriteThru_0,0, 1, 2, 12h, 1, 2, offset aAvailableOptio> 
-    ; "L2 Cache Tag Bits       : "; "8 bits"
-;    MenuItem <200Ah,    offset aL2CacheTagBits,     2842h,  4,      43h, 4,     offset a8Bits,      0, 1, 2, 17h, 4, 4, offset aAvailableOptio> 
-    MenuItem <200Ah,    offset aL2CacheTagBits,     2842h,  4,      43h, 4,     offset a8Bits,      0, 1, 2, 15h, 4, 4, offset aAvailableOptio> 
-    ; "Onboard 496A IDE Port   : "; "Disable"
-    MenuItem <200Ah,    offset aOnboard496aIde,     0FFFFh, 3,      43h, 18h,   offset aDisable_1,  0, 3, 2Ah, 4, 3, 18h, offset aAvailableOptio> 
-    ; "Onboard VESA IDE-1 WS   : "; "Slowest"
-    MenuItem <0Ah,      offset aOnboardVesaIde,     0FFFFh, 7,      43h, 0E0h,  offset aSlowest_0,  0, 7, 2Ah, 5, 0, 40h, offset aAvailableOptio>
-    ; "Onboard VESA IDE-2 WS   : "; "Slowest"
-    MenuItem <0Ah,      offset aOnboardVesaIde_0,   0FFFFh, 70h,    44h, 7,     offset aSlowest_0,  0, 7, 2Ah, 6, 0, 2, offset aAvailableOptio> 
-    ; "Onboard 496B IDE Port   : "; "Both     "
-;    MenuItem <2,        offset aOnboard496bIde,     0FFFFh, 3,      46h, 0C0h,  offset aBoth,       0, 3, 2Ah, 4, 0, 0, offset aAvailableOptio>
-    MenuItem <2,        offset aOnboard496bIde,     0FFFFh, 3,      46h, 0C0h,  offset aBoth,       0, 3, 2, 16h, 0, 0, offset aAvailableOptio>
-    ; "IDE 0 Master Mode       : "; "Auto"
-;    MenuItem <0,        offset aIde0MasterMode,     0FFFFh, 7,      44h, 70h,   offset aAuto_0,     0, 5, 2Ah, 5, 0, 0, offset aAvailableOptio>
-    MenuItem <0,        offset aIde0MasterMode,     0FFFFh, 7,      44h, 70h,   offset aAuto_0,     0, 5, 2Ah, 4, 0, 0, offset aAvailableOptio>
-    ; "IDE 0 Slave  Mode       : "; "Auto"
-;    MenuItem <0,        offset aIde0SlaveMode,      0FFFFh, 70h,    45h, 7,     offset aAuto_0,     0, 5, 2Ah, 6, 0, 0, offset aAvailableOptio> 
-    MenuItem <0,        offset aIde0SlaveMode,      0FFFFh, 70h,    45h, 7,     offset aAuto_0,     0, 5, 2Ah, 5, 0, 0, offset aAvailableOptio> 
-     ; "IDE 1 Master Mode       : "; "Auto"
-;    MenuItem <0,        offset aIde1MasterMode,     0FFFFh, 7,      45h, 38h,   offset aAuto_0,     0, 5, 2Ah, 7, 0, 0, offset aAvailableOptio> 
-    MenuItem <0,        offset aIde1MasterMode,     0FFFFh, 7,      45h, 38h,   offset aAuto_0,     0, 5, 2Ah, 6, 0, 0, offset aAvailableOptio> 
-    ; "IDE 1 Slave  Mode       : "; "Auto"
-;    MenuItem <0,        offset aIde1SlaveMode,      0FFFFh, 70h,    46h, 7,     offset aAuto_0,     0, 5, 2Ah, 8, 0, 0, offset aAvailableOptio> 
-    MenuItem <0,        offset aIde1SlaveMode,      0FFFFh, 70h,    46h, 7,     offset aAuto_0,     0, 5, 2Ah, 7, 0, 0, offset aAvailableOptio> 
-    ; "IDE Prefetch Read Buffer: "; "Disable"
-;    MenuItem <200Ah,    offset aIdePrefetchRea,     0FFFFh, 60h,    46h, 18h,   offset aDisable_2,  0, 3, 2Ah, 9, 0, 0, offset aAvailableOptio>
-    MenuItem <2002h,    offset aIdePrefetchRea,     0FFFFh, 60h,    46h, 18h,   offset aDisable_2,  0, 3, 2, 17h, 0, 0, offset aAvailableOptio>
-    ; "Programming I/O Chip    : "; "Disabled"
-    MenuItem <0Bh,      offset aProgrammingIOC,     0FFFFh, 1,      58h, 1,     offset aDisabled_2, 0, 1, 2Ah, 9, 1, 1, offset aAvailableOptio>
-    ; "Onboard FDD Controller  : "; "Enabled "
-    MenuItem <3,        offset aOnboardFddCont,     0FFFFh, 20h,    58h, 8,     offset aEnabled_0,  0, 1, 2Ah, 0Ah, 0, 0, offset aAvailableOptio> 
-    ; "Onboard Serial Port 1   : "; "COM4/2E8"
-    MenuItem <3,        offset aOnboardSerialP,     0FFFFh, 38h,    58h, 70h,   offset aCom42e8,    0, 4, 2Ah, 0Bh, 10h, 20h, offset aAvailableOptio> 
-    ; "Onboard Serial Port 2   : "; "COM3/3E8"
-    MenuItem <3,        offset aOnboardSerialP_0,   0FFFFh, 0Eh,    5Ah, 700h,  offset aCom33e8_0,  0, 4, 2Ah, 0Ch, 4, 200h, offset aAvailableOptio>
-    ; "Onboard Parallel Port   : "; "3BCH    "
-    MenuItem <3,        offset aOnboardParalle,     0FFFFh, 3,      58h, 300h,  offset a3bch,       0, 3, 2Ah, 0Dh, 2, 200h, offset aIfYouChoose3bc>
-    ; "Onboard Parallel Mode   : "; "Normal "
-    MenuItem <3,        offset aOnboardParalle_0,   0FFFFh, 0Ch,    58h, 0C00h, offset aNormal_1,   0, 3, 2Ah, 0Eh, 8, 800h, offset aAvailableOptio> 
-    ; "Serial Port 1 MIDI      : "; "Disabled"
-    MenuItem <0Fh,        offset aSerialPort1Mid,     0FFFFh, 10h,    58h, 2000h, offset aDisabled_2, 0, 1, 2Ah, 10h, 0, 0, offset aAvailableOptio>
-    ; "Serial Port 2 MIDI      : "; "Disabled"
-    MenuItem <0Fh,        offset aSerialPort2Mid,     0FFFFh, 20h,    58h, 4000h, offset aDisabled_2, 0, 1, 2Ah, 11h, 0, 0, offset aAvailableOptio>
+;   MenuItem <4002h,    offset aCacheBurstRead,     2843h,  4,      41h, 20h,   offset a1Cclk_2,    0, 1, 2, 14h, 4, 0, offset aAvailableOptio> ; "Cache Burst Read Cycle  : "; "1 CCLK"
+;   MenuItem <4002h,    offset aL2CacheDramCyc,     2843h,  2,      41h, 40h,   offset a3Cclk_1,    0, 1, 2, 15h, 0, 40h, offset aAvailableOptio> ; "L2 Cache/DRAM Cycle WS  : "; "3 CCLK"
+
+    ; Unhide RAS to CAS delay option
+    MenuItem <4002h,    offset aDramRasToCasDe,     2841h,  8,      41h, 80h,   offset a3Cclk,      0, 1, 2, 0Fh, 0, 0, offset aAvailableOptio> ; "DRAM RAS to CAS Delay   : "; "3 CCLK"
+;   MenuItem <400Ah,    offset aDramRasToCasDe,     2841h,  8,      41h, 80h,   offset a3Cclk,      0, 1, 2, 0Dh, 0, 0, offset aAvailableOptio> ; "DRAM RAS to CAS Delay   : "; "3 CCLK"
+
+    MenuItem <4002h,    offset aDramWriteCycle,     2841h,  4,      42h, 1,     offset a1Ws,        0, 1, 2, 0Ch, 0, 0, offset aAvailableOptio> ; "DRAM Write Cycle        : "; "1 WS"
+    MenuItem <4002h,    offset aDramWriteCasPu,     2841h,  2,      42h, 2,     offset a2Cclk_0,    0, 1, 2, 0Dh, 0, 0, offset aAvailableOptio> ; "DRAM Write CAS Pulse    : "; "2 CCLK"
+
+    ; Unhide CAS Precharge Time
+    MenuItem <4002h,    offset aDramCasPrechar,     2841h,  1,      42h, 4,     offset a2Cclk_1,    0, 1, 2, 10h, 0, 0, offset aAvailableOptio> ; "DRAM CAS Precharge Time : "; "2 CCLK"
+;   MenuItem <400Ah,    offset aDramCasPrechar,     2841h,  1,      42h, 4,     offset a2Cclk_1,    0, 1, 2, 10h, 0, 0, offset aAvailableOptio> ; "DRAM CAS Precharge Time : "; "2 CCLK"
+
+    ; Unhide RAS to MA delay
+    MenuItem <4002h,    offset aDramRasToMaDel,     2843h,  10h,    42h, 8,     offset a2Cclk_2,    0, 1, 2, 9,   0, 0, offset aAvailableOptio> ; "DRAM RAS to MA Delay    : "; "2 CCLK"
+;   MenuItem <400Ah,    offset aDramRasToMaDel,     2843h,  10h,    42h, 8,     offset a2Cclk_2,    0, 1, 2, 11h, 0, 0, offset aAvailableOptio> ; "DRAM RAS to MA Delay    : "; "2 CCLK"
+
+    MenuItem <4002h,    offset aDramSpeed,          2840h,  3,      42h, 30h,   offset aSlowest,    0, 3, 2, 0Bh, 2, 20h, offset aAvailableOptio> ; "DRAM Speed              : "; "Slowest"
+
+    ; Unhide Slow Refresh
+    MenuItem <2,        offset aDramSlowRefres,     2841h,  10h,    42h, 40h,   offset aDisable_0,  0, 1, 2, 0Ah, 0, 0, offset aAvailableOptio> ; "DRAM Slow Refresh       : "; "Disable"
+;   MenuItem <0Ah,      offset aDramSlowRefres,     2841h,  10h,    42h, 40h,   offset aDisable_0,  0, 1, 2, 13h, 0, 0, offset aAvailableOptio> ; "DRAM Slow Refresh       : "; "Disable"
+
+    MenuItem <2,        offset aCpuInternalCac_0,   0FFFFh, 1,      42h, 80h,   offset aWriteThru,  0, 1, 2, 0Eh, 0, 0, offset aAvailableOptio> ; "CPU Internal Cache      : "; "Write Thru"
+    MenuItem <2,        offset aCpuBurstWrite,      0FFFFh, 40h,    43h, 1,     offset aDisable_0,  0, 1, 2, 11h, 0, 0, offset aAvailableOptio> ; "CPU Burst Write         : "; "Disable"
+    MenuItem <2,        offset aL2CachePolicy,      0FFFFh, 1,      43h, 2,     offset aWriteThru_0,0, 1, 2, 12h, 1, 2, offset aAvailableOptio> ; "L2 Cache Policy         : "; "Write Thru"
+
+    MenuItem <200Ah,    offset aL2CacheTagBits,     2842h,  4,      43h, 4,     offset a8Bits,      0, 1, 2, 15h, 4, 4, offset aAvailableOptio> ; "L2 Cache Tag Bits       : "; "8 bits"
+;   MenuItem <200Ah,    offset aL2CacheTagBits,     2842h,  4,      43h, 4,     offset a8Bits,      0, 1, 2, 17h, 4, 4, offset aAvailableOptio> ; "L2 Cache Tag Bits       : "; "8 bits"
+
+    MenuItem <200Ah,    offset aOnboard496aIde,     0FFFFh, 3,      43h, 18h,   offset aDisable_1,  0, 3, 2Ah, 4, 3, 18h, offset aAvailableOptio> ; "Onboard 496A IDE Port   : "; "Disable"
+    MenuItem <0Ah,      offset aOnboardVesaIde,     0FFFFh, 7,      43h, 0E0h,  offset aSlowest_0,  0, 7, 2Ah, 5, 0, 40h, offset aAvailableOptio> ; "Onboard VESA IDE-1 WS   : "; "Slowest"
+    MenuItem <0Ah,      offset aOnboardVesaIde_0,   0FFFFh, 70h,    44h, 7,     offset aSlowest_0,  0, 7, 2Ah, 6, 0, 2, offset aAvailableOptio> ; "Onboard VESA IDE-2 WS   : "; "Slowest"
+
+    MenuItem <2,        offset aOnboard496bIde,     0FFFFh, 3,      46h, 0C0h,  offset aBoth,       0, 3, 2, 16h, 0, 0, offset aAvailableOptio> ; "Onboard 496B IDE Port   : "; "Both     "
+    MenuItem <0,        offset aIde0MasterMode,     0FFFFh, 7,      44h, 70h,   offset aAuto_0,     0, 5, 2Ah, 4, 0, 0, offset aAvailableOptio> ; "IDE 0 Master Mode       : "; "Auto"
+    MenuItem <0,        offset aIde0SlaveMode,      0FFFFh, 70h,    45h, 7,     offset aAuto_0,     0, 5, 2Ah, 5, 0, 0, offset aAvailableOptio> ; "IDE 0 Slave  Mode       : "; "Auto"
+    MenuItem <0,        offset aIde1MasterMode,     0FFFFh, 7,      45h, 38h,   offset aAuto_0,     0, 5, 2Ah, 6, 0, 0, offset aAvailableOptio> ; "IDE 1 Master Mode       : "; "Auto"
+    MenuItem <0,        offset aIde1SlaveMode,      0FFFFh, 70h,    46h, 7,     offset aAuto_0,     0, 5, 2Ah, 7, 0, 0, offset aAvailableOptio> ; "IDE 1 Slave  Mode       : "; "Auto"
+
+    ; Unhide IDE Prefetch Read Buffer
+    MenuItem <2002h,    offset aIdePrefetchRea,     0FFFFh, 60h,    46h, 18h,   offset aDisable_2,  0, 3, 2, 17h, 0, 0, offset aAvailableOptio> ; "IDE Prefetch Read Buffer: "; "Disable"
+;   MenuItem <200Ah,    offset aIdePrefetchRea,     0FFFFh, 60h,    46h, 18h,   offset aDisable_2,  0, 3, 2Ah, 9, 0, 0, offset aAvailableOptio> ; "IDE Prefetch Read Buffer: "; "Disable"
+
+    ; TODO: Figure out what the hell this is
+    MenuItem <0Bh,      offset aProgrammingIOC,     0FFFFh, 1,      58h, 1,     offset aDisabled_2, 0, 1, 2Ah, 9, 1, 1, offset aAvailableOptio> ; "Programming I/O Chip    : "; "Disabled"
+
+    MenuItem <3,        offset aOnboardFddCont,     0FFFFh, 20h,    58h, 8,     offset aEnabled_0,  0, 1, 2Ah, 0Ah, 0, 0, offset aAvailableOptio> ; "Onboard FDD Controller  : "; "Enabled "
+    MenuItem <3,        offset aOnboardSerialP,     0FFFFh, 38h,    58h, 70h,   offset aCom42e8,    0, 4, 2Ah, 0Bh, 10h, 20h, offset aAvailableOptio> ; "Onboard Serial Port 1   : "; "COM4/2E8"
+    MenuItem <3,        offset aOnboardSerialP_0,   0FFFFh, 0Eh,    5Ah, 700h,  offset aCom33e8_0,  0, 4, 2Ah, 0Ch, 4, 200h, offset aAvailableOptio> ; "Onboard Serial Port 2   : "; "COM3/3E8"
+    MenuItem <3,        offset aOnboardParalle,     0FFFFh, 3,      58h, 300h,  offset a3bch,       0, 3, 2Ah, 0Dh, 2, 200h, offset aIfYouChoose3bc> ; "Onboard Parallel Port   : "; "3BCH    "
+    MenuItem <3,        offset aOnboardParalle_0,   0FFFFh, 0Ch,    58h, 0C00h, offset aNormal_1,   0, 3, 2Ah, 0Eh, 8, 800h, offset aAvailableOptio> ; "Onboard Parallel Mode   : "; "Normal "
+ 
+    ; These two options were hidden to make room for the other new options
+    MenuItem <0Fh,      offset aSerialPort1Mid,     0FFFFh, 10h,    58h, 2000h, offset aDisabled_2, 0, 1, 2Ah, 10h, 0, 0, offset aAvailableOptio> ; "Serial Port 1 MIDI      : "; "Disabled"
+    MenuItem <0Fh,      offset aSerialPort2Mid,     0FFFFh, 20h,    58h, 4000h, offset aDisabled_2, 0, 1, 2Ah, 11h, 0, 0, offset aAvailableOptio> ; "Serial Port 2 MIDI      : "; "Disabled"
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; NEW ITEMS
 
 ; NEW option for IDE controller address setup time
-    MenuItem <0,        offset newIdeCtrlAccessTime, 2859h,  1Ch,      44h, 0e0h,offset newIdeCtrlOpts,0, 7, 2Ah, 8, 0Ch, 0Ch, offset aAvailableOptio> 
-
+    MenuItem <0,    offset newIdeCtrlAccessTime,     2859h,  1Ch,   44h, 0e0h,  offset newIdeCtrlOpts,0, 7, 2Ah, 8, 0Ch, 0Ch, offset aAvailableOptio> 
 ; New option for 16bit I/O cycle recovery
-    MenuItem <2,    offset newIO16recovery,     0071h, 0c0h,    47h, 0c0h,  offset newIO16opts, 0, 3, 2, 4, 0, 0, offset aAvailableOptio>
+    MenuItem <2,    offset newIO16recovery,          0071h, 0c0h,   47h, 0c0h,  offset newIO16opts, 0, 3, 2, 4, 0, 0, offset aAvailableOptio>
 ; New option for 8bit I/O cycle recovery
-    MenuItem <2,    offset newIO8recovery,      0071h, 030h,    47h, 030h,  offset newIO8opts,  0, 3, 2, 5, 0, 0, offset aAvailableOptio>
-
+    MenuItem <2,    offset newIO8recovery,           0071h, 030h,   47h, 030h,  offset newIO8opts,  0, 3, 2, 5, 0, 0, offset aAvailableOptio>
 ; New option for 16bit I/O Wait State
-    MenuItem <2,    offset newMemIO16ws,     0071h, 04h,    47h, 04h,  offset newMemIO16opts, 0, 1, 2Ah, 0Fh, 0, 0, offset aAvailableOptio>
+    MenuItem <2,    offset newMemIO16ws,             0071h,  04h,   47h, 04h,   offset newMemIO16opts, 0, 1, 2Ah, 0Fh, 0, 0, offset aAvailableOptio>
 ; New option for 8bit I/O Wait State
-    MenuItem <2,    offset newMemIO8ws,      0071h, 02h,    47h, 02h,  offset newMemIO8opts,  0, 1, 2Ah, 10h, 0, 0, offset aAvailableOptio>
+    MenuItem <2,    offset newMemIO8ws,              0071h,  02h,   47h, 02h,   offset newMemIO8opts,  0, 1, 2Ah, 10h, 0, 0, offset aAvailableOptio>
 
 MenuItems_ChipsetFeaturesSetup_End:
 
