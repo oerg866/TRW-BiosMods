@@ -4,6 +4,9 @@ https://theretroweb.com/motherboards/s/soyo-sy-4saw
 
 BIOS mod by Eric Voirin
 
+-<V0.98>--------------------------------------------
+* Add TRW logo mod :-)
+
 -<V0.96>--------------------------------------------
 * Remove buggy chipset init table again
   - Fixes IDE not working when PCI devices are plugged
