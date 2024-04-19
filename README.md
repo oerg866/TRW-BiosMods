@@ -21,6 +21,10 @@ This is an IDAPython script file with several functions that help disassemble st
 
 Since this is highly experimental, there is no documentation. But if you make it far enough to execute scripts inside a disassembly, you can probably figure out how to make it work :-)
 
+### award45x_funcs.py
+
+Recognizes common functions and structures, marks them in IDA and generates an include file named `CMN_FUNC.INC`
+
 ## BIOS Mod Documentation
 
 The documentation of AWARD BIOS structures is being written as development progresses and can be found here:

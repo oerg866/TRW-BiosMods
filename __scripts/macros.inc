@@ -54,7 +54,15 @@ MenuHeader      ends
 LBL MACRO NAME, OFF
     ORG OFF
 NAME:
+    ENDM
 
+SEGLBL MACRO NAME, SEG_LBL, CS_LBL, OFF
+SEG_LBL SEGMENT USE16 PARA PUBLIC 'CODE'
+    ASSUME CS:CS_LBL
+    ORG offset OFF
+NAME:
+SEG_LBL ENDS
+    ENDM
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; AWARD BIOS String stuff
@@ -78,6 +86,8 @@ V_ADDY          EQU 0Eh
 V_SUBY          EQU 0Fh
 V_CALLROUTINE   EQU 10h
 
+BP_TextAttr     EQU 080h
+
 S_StrShow       struc ; (sizeof=0x5, mappedto_4)                                ; XREF: BIOS_F:62D9/r
                                                                                 ; BIOS_F:62E5/r ...
 field_0         db V_STRSHOW
@@ -86,4 +96,13 @@ y               db ?
 string          dw ?                                                            ; offset
 S_StrShow       ends
 
-            ENDM
+S_CallRoutine   struc
+field_0         db V_CALLROUTINE        ; enum stringcodes
+routine         dw ?                    ; offset (000F0000)
+S_CallRoutine   ends
+
+S_SetPos        struc
+field_0         db V_POS
+x               db ?
+y               db ?
+S_SetPos        ends
