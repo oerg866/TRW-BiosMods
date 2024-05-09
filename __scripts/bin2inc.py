@@ -22,6 +22,11 @@ with open(sys.argv[1], 'rb') as infile:
 if len(binfile) > (16 * 65536):
     raise Exception("File too big.")
 
+isRawConversion = False
+
+if len(sys.argv) > 3:
+    if sys.argv[3] == '-raw':
+        isRawConversion = True
 
 with open(sys.argv[2], 'w') as outfile:
     BYTES_PER_LINE = 8
@@ -36,29 +41,30 @@ with open(sys.argv[2], 'w') as outfile:
 
         # Write next segment if needed
 
-        if (bytecount % 65536) == 0:
-            if cur_page != first_page:
-                outfile.write(f'SEG_{cur_page-1} ENDS\n')
+        if not isRawConversion:
+            if (bytecount % 65536) == 0:
+                if cur_page != first_page:
+                    outfile.write(f'SEG_{cur_page-1} ENDS\n')
 
-            seg =  cur_page * 0x1000
-            outfile.write(f'G_{cur_page} SEGMENT USE16 AT {hex_no_0x(seg, 5)}h\n')
-            outfile.write(f'G_{cur_page} ENDS\n')
-            outfile.write(f'SEG_{cur_page} SEGMENT USE16 PARA PUBLIC \'CODE\'\n')
-            outfile.write(f' ASSUME CS:G_{cur_page}\n')
-            outfile.write(f' ORG 0h\n')
-#            outfile.write(f'SEG_{cur_page} SEGMENT USE16 AT {hex_no_0x(seg, 5)}h\n')
+                seg =  cur_page * 0x1000
+                outfile.write(f'G_{cur_page} SEGMENT USE16 AT {hex_no_0x(seg, 5)}h\n')
+                outfile.write(f'G_{cur_page} ENDS\n')
+                outfile.write(f'SEG_{cur_page} SEGMENT USE16 PARA PUBLIC \'CODE\'\n')
+                outfile.write(f' ASSUME CS:G_{cur_page}\n')
+                outfile.write(f' ORG 0h\n')
+    #            outfile.write(f'SEG_{cur_page} SEGMENT USE16 AT {hex_no_0x(seg, 5)}h\n')
 
 
-#ECODE		SEGMENT USE16 PARA PUBLIC 'ECODE'
-#		ASSUME	CS:EGROUP,DS:G_RAM,ES:EGROUP
+    #ECODE		SEGMENT USE16 PARA PUBLIC 'ECODE'
+    #		ASSUME	CS:EGROUP,DS:G_RAM,ES:EGROUP
 
-            cur_page += 1
+                cur_page += 1
 
         outfile.write(' DB ')
 
 
         for j in range(0, BYTES_PER_LINE):
-            if (i+j) > len(binfile):
+            if (i+j) >= len(binfile):
                 break
 
             outfile.write(f'0{hex_no_0x(binfile[i + j], 2)}h')
@@ -70,6 +76,7 @@ with open(sys.argv[2], 'w') as outfile:
         outfile.write('\n')
 
         bytecount += BYTES_PER_LINE
-    
-    outfile.write(f'SEG_{cur_page-1} ENDS\n')
+
+    if not isRawConversion:
+        outfile.write(f'SEG_{cur_page-1} ENDS\n')
 #    outfile.write(' END\n')

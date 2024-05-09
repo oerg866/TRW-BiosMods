@@ -341,6 +341,7 @@ parser.add_argument('-b', type=str, action='append', help='Patch a byte in the f
 parser.add_argument('-s', type=str, action='append', help='Write a string to the given offset into the file.', nargs=2, metavar=('offset', 'string'))
 parser.add_argument('-o', type=str, help='Output file name.')
 parser.add_argument('-award450', action='store_true', help='Fixup AWARD 4.50 checksum (EXPERIMENTAL)')
+parser.add_argument('-romcs', action='store_true', help='Fix Option ROM Checksum')
 #parser.add_argument('-get_sysbios', action='store_true', help='Extract system BIOS ("original.tmp") from file.')
 parser.add_argument('-bios_extract', type=str, help="Extract all compressed BIOS modules to given directory (will be created if it doesn't exist)")
 parser.add_argument('-bios_build', type=str, help="Build a BIOS ROM with compressed modules based off a directory created with -bios_extract", nargs=2, metavar=('srcdir', 'rom_filename'))
@@ -359,13 +360,13 @@ output_filename = args.o
 # All other options require an -i parameter
 
 if bios_filename is None:
-    print("Output file name required.")
+    print("Input file name required.")
     exit()
 
 with open(bios_filename, 'rb') as bios_file:
     bios_data = bytearray(bios_file.read())
 
-if args.bios_extract == True:
+if args.bios_extract is not None:
     extract_lzh_all(args.bios_extract, bios_data)
     exit()
 
@@ -449,6 +450,12 @@ with open(output_filename, 'wb') as patched_file:
 
     if args.award450:
         bios_data = checksum_award450(bios_data)
+
+    if args.romcs:
+        new_checksum = linear_checksum_2(bios_data, 0, len(bios_data) - 1)#
+        old_checksum = bios_data[len(bios_data)-1]
+        bios_data[len(bios_data)-1] = new_checksum
+        print(f'old checksum: {hex(old_checksum)} new checksum: {hex(new_checksum)}')
 
     patched_file.write(bios_data)
 
