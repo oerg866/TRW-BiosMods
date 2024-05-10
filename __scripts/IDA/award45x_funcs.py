@@ -209,7 +209,7 @@ FUNCTION_Display_String_FAR_SaveDX = (
     []
 )
 
-FUNCTION_Display_String_FAR_CS = (
+FUNCTION_Display_String_FAR_CS_v1 = (   # Variant 1
     'Display_String_FAR_CS',
     [
         0x1E, 0x0E, 0x1F,   # push ds, push cs, pop ds
@@ -223,11 +223,21 @@ FUNCTION_Display_String_FAR_CS = (
     []
 )
 
+FUNCTION_Display_String_FAR_CS_v2 = (   # Variant 2, calls the FAR routine instead of doing a manual far call
+    'Display_String_FAR_CS',
+    [
+        0x1E, 0x0E, 0x1F,   # push ds, push cs, pop ds
+        0xE8, (REF_RELATIVE, 'Display_String_FAR'),     # call Display_String_FAR
+        0x1F, 0xC3          # pop ds, retn
+    ],
+    []
+)
+
 FUNCTION_Display_String_FAR_CS_SaveDX = (
     'Display_String_FAR_CS_SaveDX',
     [
         0x52,                                           # push dx
-        0xE8, (REF_RELATIVE, 'Display_String_FAR_CS'),     # call Display_String_FAR
+        0xE8, (REF_RELATIVE, 'Display_String_FAR_CS'),  # call Display_String_FAR_CS
         0x5A,                                           # pop dx
         0xC3,                                           # retn
     ],
@@ -256,7 +266,7 @@ FUNCTION_CheckIfWarmReboot = (
     []
 )
 
-FUNCTION_PrintPOSTStrings_451 = (
+FUNCTION_PrintPOSTStrings_451_v1 = (    # Variant 1
     'PrintPOSTStrings',
     [
         0x52,                   # push dx
@@ -284,6 +294,33 @@ FUNCTION_PrintPOSTStrings_451 = (
     ]
 )
 
+FUNCTION_PrintPOSTStrings_451_v2 = (    # Variant 2
+    'PrintPOSTStrings',
+    [
+        0x52,                   # push dx
+        0xE8, (REF_RELATIVE, 'SetCursorPosition_FAR'),  # call SetCursorPosition_FAR
+        0xBE, None, None,   # mov si, offset biosString
+        0xE8, (REF_RELATIVE, 'Display_String_FAR_SaveDX'),
+        0xBE, None, None,   # mov si, offset anEnergyStarAlly
+        0xE8, (REF_RELATIVE, 'Display_String_FAR_CS_SaveDX'),
+        0x5A, # pop dx
+        0xFE, 0xC6, # inc dh
+        0xE8, (REF_RELATIVE, 'SetCursorPosition_FAR'),
+        0xBE, None, None,   # mov si, offset Copyright
+        0xE8, (REF_RELATIVE, 'Display_String_FAR_SaveDX'),
+        0xE8, (REF_RELATIVE, 'DispStr_CRLF_FAR'),
+        0xE8, (REF_RELATIVE, 'DispStr_CRLF_FAR'),
+        0xBE, None, None,   # mov si, offset biosrevinfo
+        0xE8, (REF_RELATIVE, 'Display_String_FAR_SaveDX'),
+        0xE8, (REF_RELATIVE, 'DispStr_CRLF_FAR'),
+        0x06,               # push es
+        0xB8, 0x00, 0x40    # mov ax, 4000h
+    ],
+    [
+    ]
+)
+
+
 FUNCTION_EarlyChipsetInit = (
     'EarlyChipsetInit',
     [
@@ -297,6 +334,17 @@ FUNCTION_EarlyChipsetInit = (
     [
         ( 'Sys_ChipsetInitTable',        5, CONST_WORD ),
         ( 'Sys_ChipsetInitTable_end',    9, CONST_WORD ),
+    ]
+)
+
+
+FUNCTION_OutPort16 = (
+    'OutPort16',
+    [
+        0xEE, 0xFE, 0xC2, 0x86, 0xE0,           # out dx, al | inc dl | xchg ah, al
+        0xEE, 0xFE, 0xCA, 0x86, 0xE0            # out dx, al | dec dl | xchg ah, al
+    ],
+    [
     ]
 )
 
@@ -380,12 +428,15 @@ COMMON_FUNCTION_LIST = [
     FUNCTION_Write_Character_FAR,
     FUNCTION_Display_String_FAR,
     FUNCTION_Display_String_FAR_SaveDX,
-    FUNCTION_Display_String_FAR_CS,
+    FUNCTION_Display_String_FAR_CS_v1,
+    FUNCTION_Display_String_FAR_CS_v2,
     FUNCTION_Display_String_FAR_CS_SaveDX,
     FUNCTION_Display_String_FAR_SaveCursor,
     FUNCTION_CheckIfWarmReboot,
-    FUNCTION_PrintPOSTStrings_451,
-    FUNCTION_EarlyChipsetInit
+    FUNCTION_PrintPOSTStrings_451_v1,
+    FUNCTION_PrintPOSTStrings_451_v2,
+    FUNCTION_EarlyChipsetInit,
+    FUNCTION_OutPort16
 ]
 
 COMMON_STRUCT_LIST = [
@@ -620,7 +671,9 @@ def findFuncs_IDA():
             flags = ida_bytes.get_flags(funcLoc)
 
             if not ida_bytes.is_code(flags):
-                success = add_func(funcLoc)
+
+                ida_bytes.del_items(funcLoc)
+                success = create_insn(funcLoc) and add_func(funcLoc)
             
                 if not success:
                     raise Exception(f"Couldn't make function {funcName} at {hex(funcLoc)} in IDA")
