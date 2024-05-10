@@ -25,7 +25,7 @@ SEG_14 SEGMENT USE16 PARA PUBLIC 'CODE'
     ; int 10h <-- remove this instruction
     nop
     nop
-    
+
 SEG_14 ENDS
 
 SEG_15 SEGMENT USE16 PARA PUBLIC 'CODE'
@@ -35,7 +35,7 @@ SEG_15 SEGMENT USE16 PARA PUBLIC 'CODE'
 ;-----------------------------------------------------
 ; Modify version string
     org Str_BiosInfo
-    db 'Soyo 4SA2 Mod Bios v0.91 by E. Voirin (oerg866)',0
+    db 'Soyo 4SA2 Mod Bios v0.92 by E. Voirin (oerg866)',0
 
 ;-----------------------------------------------------
 ; Modify POST string
@@ -65,6 +65,17 @@ SEG_15 SEGMENT USE16 PARA PUBLIC 'CODE'
     MenuHeader <offset MenuItems_PCIConfigSetup, offset MenuItems_PCIConfigSetup_End, 261Ah>
 ; PNP Config Setup (N/A)
     MenuHeader <2A44h, 2A44h, 2A24h>
+
+;------------------------------------------------------
+;
+; Fix boot with VLB cards
+
+    org Sys_ChipsetInitTable+1Ch
+
+;   Set pin mux config:
+;   1X1 = MA11 PREQ3# PGNT3#
+;   0 = Pin 207: LBD#, PIN 204: LRDY# 
+    AwardChipsetRegisters <2, 57h, 28h, 7Fh, 0F7h>
 
 SEG_15 ENDS
 

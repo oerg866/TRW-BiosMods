@@ -4,6 +4,9 @@ https://theretroweb.com/motherboards/s/soyo-sy-04sa5
 
 BIOS mod by Eric Voirin
 
+-<V0.92>--------------------------------------------
+* Restore capability to boot off VLB VGA cards
+
 -<V0.91>--------------------------------------------
 * Fix POST screen font corruption
 
