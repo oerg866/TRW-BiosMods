@@ -6,6 +6,7 @@ Currently, the following motherboards have custom BIOSES:
 
 * ABIT PW4 (N/A yet, need to clean up the patches)
 * SOYO 4SAW
+* SOYO 4SA2/4SA5
 
 ## Script files
 

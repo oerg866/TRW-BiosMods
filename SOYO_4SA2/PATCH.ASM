@@ -19,6 +19,13 @@ TRW_HACK_ADDR_F_SEG EQU 07FC0h ; F Segment injection address
 SEG_14 SEGMENT USE16 PARA PUBLIC 'CODE'
     ASSUME CS:G_14
 
+;------------------------------------------------------
+; Fix garbling of characters before "space" in the system font so we can show TRW monitor dot
+    org 02BBFh
+    ; int 10h <-- remove this instruction
+    nop
+    nop
+    
 SEG_14 ENDS
 
 SEG_15 SEGMENT USE16 PARA PUBLIC 'CODE'
@@ -28,12 +35,12 @@ SEG_15 SEGMENT USE16 PARA PUBLIC 'CODE'
 ;-----------------------------------------------------
 ; Modify version string
     org Str_BiosInfo
-    db 'Soyo 4SA2 Mod Bios v0.90 by E. Voirin (oerg866)',0
+    db 'Soyo 4SA2 Mod Bios v0.91 by E. Voirin (oerg866)',0
 
 ;-----------------------------------------------------
 ; Modify POST string
     org 0EC71h
-    db '05/08/24-SiS-496-497-TRW-2A4IBS2hC-00'
+    db '05/10/24-SiS-496-497-TRW-2A4IBS2hC-00'
 
 ; Modify setup menu string
     org Str_SetupMenuCopyright
