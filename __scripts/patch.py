@@ -354,6 +354,7 @@ parser.add_argument('-romcs', action='store_true', help='Fix Option ROM Checksum
 #parser.add_argument('-get_sysbios', action='store_true', help='Extract system BIOS ("original.tmp") from file.')
 parser.add_argument('-bios_extract', type=str, help="Extract all compressed BIOS modules to given directory (will be created if it doesn't exist)")
 parser.add_argument('-bios_build', type=str, help="Build a BIOS ROM with compressed modules based off a directory created with -bios_extract", nargs=2, metavar=('srcdir', 'rom_filename'))
+parser.add_argument('-pad', type=str, help='Pad output file to specified size')
 
 args = parser.parse_args()
 
@@ -465,6 +466,9 @@ with open(output_filename, 'wb') as patched_file:
         old_checksum = bios_data[len(bios_data)-1]
         bios_data[len(bios_data)-1] = new_checksum
         print(f'old checksum: {hex(old_checksum)} new checksum: {hex(new_checksum)}')
+    if args.pad:
+        pad_size = int(args.pad, 0)
+        bios_data += bytearray(pad_size - len(bios_data))
 
     patched_file.write(bios_data)
 
