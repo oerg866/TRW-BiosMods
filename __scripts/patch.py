@@ -502,10 +502,13 @@ with open(output_filename, 'wb') as patched_file:
         bios_data = checksum_award450(bios_data)
 
     if args.romcs:
-        new_checksum = linear_checksum_2(bios_data, 0, len(bios_data) - 1)#
-        old_checksum = bios_data[len(bios_data)-1]
-        bios_data[len(bios_data)-1] = new_checksum
-        print(f'old checksum: {hex(old_checksum)} new checksum: {hex(new_checksum)}')
+        end_of_rom = bios_data[2] * 512
+        
+        new_checksum = linear_checksum_2(bios_data, 0, end_of_rom - 1)#
+        old_checksum = bios_data[end_of_rom-1]
+        bios_data[end_of_rom-1] = new_checksum
+        print(f'0x0000 - {hex(end_of_rom-2)} old checksum: {hex(old_checksum)} new checksum: {hex(new_checksum)}')
+
     if args.pad:
         pad_size = int(args.pad, 0)
         bios_data += bytearray(pad_size - len(bios_data))
