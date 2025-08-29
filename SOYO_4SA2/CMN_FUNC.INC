@@ -38,6 +38,10 @@ BIOS_VERSION                             EQU 04510h
  SEGLBL PrintPOSTStrings,                        SEG_14, G_14, 02a3ch ; Segment 14
  SEGLBL EarlyChipsetInit,                        SEG_15, G_15, 05380h ; Segment 15
  SEGLBL OutPort16,                               SEG_14, G_14, 02c74h ; Segment 14
+ SEGLBL CheckCTRLAltDel,                         SEG_15, G_15, 0b1a9h ; Segment 15
+ SEGLBL Reboot,                                  SEG_15, G_15, 0e7a4h ; Segment 15
+ SEGLBL Start_1,                                 SEG_15, G_15, 0f470h ; Segment 15
+ SEGLBL ISR_IRQ12_PS2Mouse,                      SEG_15, G_15, 0ee90h ; Segment 15
 
 
 ; COMMON BIOS STRUCTURES 

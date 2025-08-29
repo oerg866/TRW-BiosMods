@@ -23,7 +23,7 @@ MenuItems_PCIConfigSetup:
     MenuItem <0, offset aPciIdeIrqMapTo,    0FFFFh, 00001110b, 54h, 00001110b, offset aPciAuto,     0, 5,   2, 16, 000h, 000h, offset BlankString> ; "PCI IDE IRQ Map To  : " ; "PCI-AUTO "
     MenuItem <0, offset aPrimaryIdeInt,     0FFFFh, 00110000b, 54h, 00110000b, offset aA,           0, 3,   2, 17, 000h, 000h, offset BlankString> ; " Primary   IDE INT# : " ; "A"
     MenuItem <0, offset aSecondaryIdeIn,    0FFFFh, 11000000b, 54h, 11000000b, offset aA,           0, 3,   2, 18, 040h, 040h, offset BlankString> ; " Secondary IDE INT# : " ; "A"
-    MenuItem <2, offset aMasterArbitrat,     2856h, 10000000b, 55h, 00000001b, offset aWeak,        0, 1,   2, 20, 000h, 000h, offset aAvailableOptio> ; "Master Arbitration Protocol : " ; "Weak  " ; "Available Options:\v"
+    MenuItem <2, offset aMasterArbitrat,     2856h, 11000000b, 57h, 11000000b, offset aWeak,        0, 3,   2, 19, 000h, 000h, offset aAvailableOptio> ; "Master Arbitration Protocol : " ; "Weak  " ; "Available Options:\v"
     MenuItem <2, offset aCpuPciMemPostW,     2856h, 00100000b, 55h, 00000010b, offset aDisable_11,  0, 1,   2, 21, 000h, 000h, offset aAvailableOptio> ; "CPU->PCI Mem Post Write Buf : " ; "Disable" ; "Available Options:\v"
     MenuItem <2, offset aCpuPciMemoryBu,     2856h, 00010000b, 55h, 00000100b, offset aDisable_11,  0, 1,   2, 22, 000h, 000h, offset aAvailableOptio> ; "CPU->PCI Memory Burst Write : " ; "Disable" ; "Available Options:\v"
     MenuItem <2, offset aPciMasterBurst,     2857h, 10000000b, 55h, 01000000b, offset aDisable_11,  0, 1,   2, 23, 000h, 000h, offset aAvailableOptio> ; "PCI Master Burst Read/Write : " ; "Disable" ; "Available Options:\v"
@@ -111,8 +111,10 @@ aB_0            db 'B',0
 aC_0            db 'C',0
 aD_0            db 'D',0
 aMasterArbitrat db 'Master Arbitration Protocol : ',0
-aWeak           db 'Weak  ',0
-aStrong         db 'Strong',0
+aWeak           db 'Weakest  ',0
+                db 'Weak     ',0
+                db 'Stronger ',0
+                db 'Strongest',0
 aCpuPciMemPostW db 'CPU->PCI Mem Post Write Buf : ',0
 aCpuPciMemoryBu db 'CPU->PCI Memory Burst Write : ',0
 aDisable_11     db 'Disable',0
