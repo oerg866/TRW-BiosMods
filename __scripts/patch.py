@@ -366,9 +366,9 @@ def rebuild_rom(source_folder, output_filename):
             else:
                 # Not a system BIOS, just put the file
                 rom_data[current_module_offset:current_module_offset+len(compressed_data)] = compressed_data
+                current_module_offset += len(compressed_data)
 
             print(f'{file_count}: Compress {module_filename} {module_segment}-> {tmp_filename}, offset {hex(offset_written)}, size {len(compressed_data)}')
-            current_module_offset += len(compressed_data)
 
             file_count += 1
 
