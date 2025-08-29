@@ -86,7 +86,16 @@ def extract_lzh_from(destination_folder, buffer, offset):
     filetime = struct.unpack_from('<H', arc_data, 15)[0]
     filedate = struct.unpack_from('<H', arc_data, 17)[0]
 
-    filename = struct.unpack_from(f'{filename_length}s', arc_data, 22)[0].decode()
+    # Now we have to do a weird hack for reading the filename because some BIOSes specify a longer file name than there actually is. The actual filename is null terminated in that case, with garbage(?) data after it.
+    filename_raw = struct.unpack_from(f'{filename_length}s', arc_data, 22)[0]
+    filename = str()
+
+    filename_idx = 0
+    for c in filename_raw:
+        if filename_idx >= filename_length or c == 0x00:
+            break
+
+        filename += chr(c)
     
     temporary_compressed_length = temporary_compressed_length + 2 # 2 for the "next header size" field
 
