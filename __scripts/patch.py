@@ -144,13 +144,26 @@ def extract_lzh_from(destination_folder, buffer, offset):
 
     return [temporary_compressed_length, filename, filetime, filedate]
 
-def extract_lzh_all(destination_folder, buffer):
+def extract_lzh_all(destination_folder, buffer:bytearray):
     current_arc_offset = 0
     files_extracted = 0
 
     all_files = []
 
-    while True:
+    lh5_header = '-lh5-'.encode('ascii')
+
+    current_arc_offset = buffer.find(lh5_header, 0)
+    find_ok = True
+
+    if current_arc_offset < 2:
+        print('No LHA header found in file. Nothing to extract.')
+        find_ok = False
+    elif current_arc_offset > 2:
+        print('Nonstandard or AWARD 6.xx file. You will not be able to reconstruct this BIOS with this script (yet).')
+
+    current_arc_offset -= 2
+
+    while find_ok:
         last_arc_size, last_arc_filename, last_arc_offset, last_arc_segment = extract_lzh_from(destination_folder, buffer, current_arc_offset)
 
         if last_arc_size <= 0:
