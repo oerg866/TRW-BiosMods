@@ -4,6 +4,10 @@ https://theretroweb.com/motherboards/s/soyo-sy-04sa5
 
 BIOS mod by Eric Voirin
 
+-<V0.93>--------------------------------------------
+* Enable more options for 
+  'Master Arbitration Protocol' option
+
 -<V0.92>--------------------------------------------
 * Restore capability to boot off VLB VGA cards
 

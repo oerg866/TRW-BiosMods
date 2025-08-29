@@ -35,12 +35,12 @@ SEG_15 SEGMENT USE16 PARA PUBLIC 'CODE'
 ;-----------------------------------------------------
 ; Modify version string
     org Str_BiosInfo
-    db 'Soyo 4SA2 Mod Bios v0.92 by E. Voirin (oerg866)',0
+    db 'Soyo 4SA2 Mod Bios v0.93 by E. Voirin (oerg866)',0
 
 ;-----------------------------------------------------
 ; Modify POST string
     org 0EC71h
-    db '05/10/24-SiS-496-497-TRW-2A4IBS2hC-00'
+    db '08/30/25-SiS-496-497-TRW-2A4IBS2hC-00'
 
 ; Modify setup menu string
     org Str_SetupMenuCopyright
