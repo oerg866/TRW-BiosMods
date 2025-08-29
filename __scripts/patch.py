@@ -378,7 +378,56 @@ def rebuild_rom(source_folder, output_filename):
     with open(output_filename, 'wb') as outfile:
         outfile.write(rom_data)
 
+def read_phoenix_set(input_filename):
+    base_name, ext = os.path.splitext(input_filename)
+    ext = ext.lower()
 
+    if ext != '.bio':
+        raise Exception("ERROR - input file must be .BIO extension")
+
+    # Get file number
+    # Get EndMarker
+
+    current_filename = base_name + ext
+    index = 0
+
+    out_data = bytearray()
+
+    while True:
+        with open(current_filename, 'rb') as infile:
+            cur_data = infile.read()
+
+        id, size, is_last = struct.unpack_from('<HIxB', cur_data, 0x52)
+
+        if id != index:
+            raise Exception("Error: input file internal index doesn't match running order")
+
+        out_data += cur_data[0xA0:0xA0+size]
+
+        print(f'file {current_filename}, index {hex(id)}, size: {hex(size)}, is_last: {hex(is_last)}')
+
+        if is_last:
+            break
+
+        index += 1
+        current_filename =  base_name + f'.BI{index}'
+
+    # Now figure out the actual ROM size....
+
+    total_size = 1
+
+    while (total_size < len(out_data)):
+        total_size *= 2
+
+    print(f'Probable ROM size: {total_size} ({hex(total_size)})')
+
+    # Add the padding to the start
+    padding_size = total_size - len(out_data)
+    padding = bytearray([0xff] * padding_size)
+
+    out_data = padding + out_data
+
+    return out_data
 
 # create an argument parser with options, parse and extract them
 parser = argparse.ArgumentParser(description='BIOS patch stuffery by Oerg866 :3', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -395,6 +444,7 @@ parser.add_argument('-romcs', action='store_true', help='Fix Option ROM Checksum
 parser.add_argument('-bios_extract', type=str, help="Extract all compressed BIOS modules to given directory (will be created if it doesn't exist)")
 parser.add_argument('-bios_build', type=str, help="Build a BIOS ROM with compressed modules based off a directory created with -bios_extract", nargs=2, metavar=('srcdir', 'rom_filename'))
 parser.add_argument('-pad', type=str, help='Pad output file to specified size')
+parser.add_argument('-phoenixtobin', action='store_true', help='Convert Phoenix BIOS update set (*.BIO, *.BI1, ...) to singular binary image')
 
 args = parser.parse_args()
 
@@ -512,6 +562,10 @@ with open(output_filename, 'wb') as patched_file:
     if args.pad:
         pad_size = int(args.pad, 0)
         bios_data += bytearray(pad_size - len(bios_data))
+
+    if args.phoenixtobin:
+        bios_data = read_phoenix_set(args.i)
+
 
     patched_file.write(bios_data)
 
