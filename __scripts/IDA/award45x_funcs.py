@@ -348,6 +348,57 @@ FUNCTION_OutPort16 = (
     ]
 )
 
+FUNCTION_CheckCTRLAltDel = (
+    'CheckCTRLAltDel',
+    [
+        0x80, 0x7E, 0xFF, 0x53,                 # cmp     byte ptr [bp-1], 53h
+        0x75, None,                             # jnz short xxx
+        0xF6, 0x06, None, 0x00, 0x08,           # test byte ptr ds:xx, 8
+        0x74, None,                             # jz short xxx
+        0xf6, 0x06, None, 0x00, 0x04,           # test byte ptr ds:xx, 4
+        0x74, None,                             # jz short xxx
+        0xC7, 0x06, None, None, 0x34, 0x12      # mov wrd ptr ds:xxxx, 1234h
+    ],
+    [
+    ]
+)
+
+FUNCTION_Reboot = (
+    'Reboot',
+    [
+        0xB8, 0x40, 0x00,                       # mov ax, 40h
+        0x8E, 0xD8,                             # mov dx, ax
+        0x32, 0xE4,                             # xor ah, ah
+        0xa0, None, None,                       # mov al, ds:49h
+        0xcd, 0x10
+    ],
+    [
+    ]
+)
+
+FUNCTION_Start_1 = (
+    'Start_1',
+    [
+        0x8E, 0xEA,                             # mov gs, dx
+        0xFA, 0xFC,                             # cli | cld
+        0xE4, 0x64,                             # in al, 64h
+        0xA8, 0x04,                             # test al, 4
+    ],
+    [
+    ]
+)
+
+FUNCTION_ISR_IRQ12_PS2Mouse = (
+    'ISR_IRQ12_PS2Mouse',
+    [
+        0x50, 0x53, 0x51, 0x56, 0x57, 0x55,     # push ax, bx, cx, si, di, bp,
+        0x1e, 0x06,  0xfc,                      # push ds, push es, cld
+        0xe4, 0x60,                             # in al, 60h
+    ],
+    [
+    ]
+)
+
 STRUCT_ColorStyle_Default = (
     'ColorStyle_Default',
     [
@@ -436,7 +487,11 @@ COMMON_FUNCTION_LIST = [
     FUNCTION_PrintPOSTStrings_451_v1,
     FUNCTION_PrintPOSTStrings_451_v2,
     FUNCTION_EarlyChipsetInit,
-    FUNCTION_OutPort16
+    FUNCTION_OutPort16,
+    FUNCTION_CheckCTRLAltDel,
+    FUNCTION_Reboot,
+    FUNCTION_Start_1,
+    FUNCTION_ISR_IRQ12_PS2Mouse,
 ]
 
 COMMON_STRUCT_LIST = [
