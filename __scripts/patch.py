@@ -168,21 +168,31 @@ def extract_lzh_all(destination_folder, buffer:bytearray):
 
         if last_arc_size <= 0:
             print(f'extract_lzh_from returned with code {last_arc_size}')
-            break
-        
+            next_offset = buffer[current_arc_offset:].find(lh5_header, 0) - 2 # This will end up negative if not found, in which case the loop will exit
+            
+            if next_offset < 0:
+                break
+            
+            print(f'Skipping gap of {next_offset} ({hex(next_offset)}) bytes')
+            current_arc_offset += next_offset
+            continue
+
         print(f'Module name: {last_arc_filename}, Module Size: {last_arc_size}, LoadSegment: {hex(last_arc_segment)}, LoadOffset: {hex(last_arc_offset)}')
 
         files_extracted += 1
-        # The first file is the system BIOS
-        if files_extracted == 1:
-#            print(f'SYSTEM BIOS name is {last_arc_filename}')
+
+        # Handle system bios
+        if last_arc_segment == 0x5000:
+            print(f'SYSTEM BIOS name is {last_arc_filename}')
             current_arc_checksum = linear_checksum_1(buffer, current_arc_offset, last_arc_size)
             print(f'System BIOS Checksum: {hex(current_arc_checksum)} (calculated) | {hex(buffer[current_arc_offset + last_arc_size])} (in file)')
-            current_arc_offset += 1 # +1 for checksum byte
+
+            if files_extracted == 1:
+                current_arc_offset += 1 # +1 for checksum byte
 
         current_arc_offset += last_arc_size
 
-        all_files.append(tuple([last_arc_filename, last_arc_offset, last_arc_segment]))
+        all_files.append(tuple([last_arc_filename, last_arc_size, last_arc_offset, last_arc_segment]))
 
     print(f'Files extracted: {files_extracted}: {all_files}')
 
@@ -200,8 +210,8 @@ def extract_lzh_all(destination_folder, buffer:bytearray):
     with open(os.path.join(destination_folder, "files.dat"), "w") as listfile:
         # Write maximal compressed modules total size as first line (important!)
         listfile.write(f'{current_arc_offset}\n')
-        for file, offset, segment in all_files:
-            listfile.write(f'{file} {hex(offset)} {hex(segment)}\n')
+        for file, compressed_size, offset, segment in all_files:
+            listfile.write(f'{file} {compressed_size} {hex(offset)} {hex(segment)}\n')
 
     with open(os.path.join(destination_folder, "baserom.bin"), "wb") as baseromfile:
         baseromfile.write(buffer)
@@ -282,16 +292,19 @@ def lzh_convert_to_award_header(input_data:bytearray, offset, segment):
     return output_data
 
 def rebuild_rom(source_folder, output_filename):
+    # Read base ROM
+    with open(os.path.join(source_folder, 'baserom.bin'), 'rb') as baserom:
+        rom_data = bytearray(baserom.read())
+
+
     with open(os.path.join(source_folder, 'files.dat'), 'r') as filelist:
-        with open(os.path.join(source_folder, 'baserom.bin'), 'rb') as baserom:
-            rom_data = bytearray(baserom.read())
 
         uncomp_start_offset = int(filelist.readline())
 
-        print(f'{hex(uncomp_start_offset)}')
-
         # Remove everything before the important data starts
         rom_data[0:uncomp_start_offset] = [0xff] * uncomp_start_offset
+
+        print(f'{hex(uncomp_start_offset)}')
         
         tmp_filename = 'tmp.lzh'
         file_count = 0
@@ -301,19 +314,19 @@ def rebuild_rom(source_folder, output_filename):
 
         for module_entry in filelist:
 
-            module_filename, module_offset, module_segment = module_entry.rstrip().split(' ')
+            module_filename, module_orig_compressed_size, module_offset, module_segment = module_entry.rstrip().split(' ')
 
             # Fix F-Segment checksum if needed
 
-            if file_count == 0:
+            if module_segment == '0x5000':
                 sysbios_filename = os.path.join(source_folder, module_filename)
                 with open(sysbios_filename, 'rb') as tmp:
                     sysbios_data = bytearray(tmp.read())
-                with open(sysbios_filename, 'wb') as tmp:
                     print(f'{sysbios_filename} {len(sysbios_data)}')
                     sum = linear_checksum_2(sysbios_data, len(sysbios_data) - 0x10000, 0xffff)
                     print(f'SYSBIOS F-Segment Checksum: {hex(sum)} (calculated) {hex(sysbios_data[len(sysbios_data)-1])} (in file)')
                     sysbios_data[len(sysbios_data)-1] = sum
+                with open(sysbios_filename, 'wb') as tmp:
                     tmp.write(sysbios_data)
 
             # Compress into temporary LZH file
@@ -329,19 +342,33 @@ def rebuild_rom(source_folder, output_filename):
             # Finnagle header to make it AWARD compliant
             compressed_data = lzh_convert_to_award_header(compressed_data, int(module_offset, base=0), int(module_segment, base=0))
 
-            rom_data[current_module_offset:current_module_offset+len(compressed_data)] = compressed_data
-            
-            print(f'{file_count}: Compress {module_filename} -> {tmp_filename}, offset {hex(current_module_offset)}, size {len(compressed_data)}')
-
-            current_module_offset += len(compressed_data)
+            offset_written = current_module_offset
 
             # For the system bios we need to add a checksum
-
-            if file_count == 0:
+            if module_segment == '0x5000':
                 checksum = linear_checksum_1(compressed_data, 0, len(compressed_data))
                 print(f'System BIOS checksum: {hex(checksum)}')
-                rom_data[current_module_offset] = checksum
-                current_module_offset += 1
+
+                # Some BIOSes have it in the last 128K, some have it at the very beginning... Not sure how to handle this correctly
+                if file_count == 0:
+                    # File start, need to increment current module offset by 1 for the checksum byte
+                    rom_data[current_module_offset:current_module_offset+len(compressed_data)] = compressed_data
+                    rom_data[current_module_offset+len(compressed_data)] = checksum
+                    current_module_offset += len(compressed_data) + 1
+                else:
+                    # Special case, in this case we need to blank out the previous data in case the new data is smaller
+                    offset_written = len(rom_data) - 131072 # 128K before the end
+                    module_orig_compressed_size_int = int(module_orig_compressed_size) + 1 # Overwrite the checksum too
+                    rom_data[offset_written:offset_written+module_orig_compressed_size_int] =  [0xff] * module_orig_compressed_size_int
+                    rom_data[offset_written:offset_written+len(compressed_data)] = compressed_data
+                    rom_data[offset_written+len(compressed_data)] = checksum
+
+            else:
+                # Not a system BIOS, just put the file
+                rom_data[current_module_offset:current_module_offset+len(compressed_data)] = compressed_data
+
+            print(f'{file_count}: Compress {module_filename} {module_segment}-> {tmp_filename}, offset {hex(offset_written)}, size {len(compressed_data)}')
+            current_module_offset += len(compressed_data)
 
             file_count += 1
 
