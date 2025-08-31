@@ -256,3 +256,7 @@ def parseMenuFromScratch():
         offset = getNextItemAddr(offset)
 
     print("donezo schmonezo")
+
+
+
+parseMenuFromScratch()
