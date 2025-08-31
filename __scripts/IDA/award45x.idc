@@ -112,7 +112,7 @@ static Structures_0(id) {
 	mid = add_struc_member(id,"Value",	0X5,	0x10000400,	-1,	2);
 	
 	id = get_struc_id("MenuItem");
-	mid = add_struc_member(id,"TypeStatus",	0,	0x10000400,	-1,	2);
+	mid = add_struc_member(id,"TypeStatus",	0,	0x10600400,	-1,	2);
 	mid = add_struc_member(id,"ItemName",	0X2,	0x10500400,	0XF0000,	2,	BADADDR,	0,	0x000002);
 	mid = add_struc_member(id,"DeviceReg",	0X4,	0x10100400,	-1,	2);
 	mid = add_struc_member(id,"DeviceRegMask",	0X6,	0x10600400,	-1,	2);
