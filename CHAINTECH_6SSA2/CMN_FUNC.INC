@@ -11,6 +11,8 @@ Sys_ChipsetInitTableendPtr               EQU 0f861h
 
 BP_CurrentColorStyle                     EQU 014bh
 BP_ClipBottomY                           EQU 01c5h
+CPUSTR_Unknown                           EQU 08f17h
+CPUNameTable                             EQU 08e66h
 BIOS_VERSION                             EQU 04510h
 
 
@@ -43,8 +45,10 @@ BIOS_VERSION                             EQU 04510h
  SEGLBL SpuriousInterrupt,                       SEG_14, G_14, 01ed8h ; Segment 14
  SEGLBL ExitProtModeAfterMemtest,                SEG_14, G_14, 01ef0h ; Segment 14
  SEGLBL GetDisplaySwitch,                        SEG_14, G_14, 01ac0h ; Segment 14
- SEGLBL MemTest,                                 SEG_14, G_14, 02090h ; Segment 14
- SEGLBL DispMemMsg,                              SEG_14, G_14, 024d4h ; Segment 14
+ SEGLBL DetectMemSize,                           SEG_14, G_14, 02090h ; Segment 14
+ SEGLBL DisplayMemMsg,                           SEG_14, G_14, 024d4h ; Segment 14
+ SEGLBL CPUID1,                                  SEG_14, G_14, 08f70h ; Segment 14
+ SEGLBL GetCPUString,                            SEG_14, G_14, 08e1ch ; Segment 14
 
 
 ; COMMON BIOS STRUCTURES 

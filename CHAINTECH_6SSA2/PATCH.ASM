@@ -39,7 +39,7 @@ SEGLBL MemTestEnd,      SEG_14, G_14, 024B1h    ; End of memtest code
 ; Quick Mem Test backport from later AWARD BIOSes
     mov dx, [bp+152h]
 QuickMemTestLoop:
-    call DispMemMsg
+    call DisplayMemMsg
     jc MemTestEnd ; Test finished? If yes, get out
     add dx, 4 ; Next segment
     cmp dx, [bp+154h] ; RAM Done?

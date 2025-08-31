@@ -490,6 +490,7 @@ FUNCTION_DetectMemSize = (
     ],
     []
 )
+
 FUNCTION_DisplayMemMsg = (
     'DisplayMemMsg',
     [
@@ -501,6 +502,36 @@ FUNCTION_DisplayMemMsg = (
         0x40,                                               # inc ax
     ],
     []
+)
+
+FUNCTION_CPUID1 = (   # Earlier P2 BIOSes
+    'CPUID1',
+    [
+        0x66, 0x53, # push ebx
+        0x66, 0xb8, 0x01, 0x00, 0x00, 0x00, #mov eax, 1
+        0x0f, 0xa2, # cpuid
+        0x66, 0x5b, # pop ebx
+        0xc3, # retn
+    ],
+    [
+    ]
+)
+
+FUNCTION_GetCPUString_P2P3_V1 = (   # Earlier P2 BIOSes
+    'GetCPUString',
+    [
+        0x8a, 0x46, 0x3D,               # mov al, [bp+3dh]
+        0x24, 0x7e,                     # and al, 7eh
+        0x3c, 0x58,                     # cmp al, 58h
+        0xbe, None, None,               # mov si, offset CPUSTR_Unknown
+        0x77, 0x08,                     # ja short OlderThanPentium
+        0x0f, 0xb6, 0xf0,               # movzx si, al
+        0x2e, 0x8b, 0xb4, None, None,   # mov si, cs:CPUNameTable[si]
+    ],
+    [
+        ( 'CPUSTR_Unknown', 8, CONST_WORD ),
+        ( 'CPUNameTable', 0x12, CONST_WORD ),
+    ]
 )
 
 STRUCT_ColorStyle_Default = (
@@ -603,7 +634,9 @@ COMMON_FUNCTION_LIST = [
     FUNCTION_ExitProtModeAfterMemtest,
     FUNCTION_GetDisplaySwitch,
     FUNCTION_DetectMemSize,
-    FUNCTION_DisplayMemMsg
+    FUNCTION_DisplayMemMsg,
+    FUNCTION_CPUID1,
+    FUNCTION_GetCPUString_P2P3_V1,
 ]
 
 COMMON_STRUCT_LIST = [
