@@ -66,6 +66,7 @@ static ApplyStrucTInfos_0(void) {
         auto id;
 	id = get_struc_id("AwardChipsetRegisters");
 	id = get_struc_id("MenuItem");
+	SetType(get_member_id(id, 0x17), "MenuItem *");
 	id = get_struc_id("SysbiosMenuDef");
 	id = get_struc_id("S_CallRoutine");
 	id = get_struc_id("MenuItemCallback");
@@ -125,7 +126,7 @@ static Structures_0(id) {
 	mid = add_struc_member(id,"YPos",	0X12,	0x00200400,	-1,	1);
 	mid = add_struc_member(id,"PowerOnDefault",	0X13,	0x10000400,	-1,	2);
 	mid = add_struc_member(id,"SetupDefault",	0X15,	0x10000400,	-1,	2);
-	mid = add_struc_member(id,"HelpStr",	0X17,	0x10500400,	0XF0000,	2,	BADADDR,	0,	0x000002);
+	mid = add_struc_member(id,"HelpStr",	0X17,	0x10500400,	0,	2,	BADADDR,	0,	0x000021);
 	
 	id = get_struc_id("SysbiosMenuDef");
 	mid = add_struc_member(id,"PageStart",	0,	0x10500400,	0XF0000,	2,	BADADDR,	0,	0x000002);
