@@ -23,9 +23,9 @@ SEG_14 SEGMENT USE16 PARA PUBLIC 'CODE'
 ; Make memory test EXTREMELY fast like it is in later AWARD BIOSes
 ; Backports Quick POST Memory Test from late Award 4.51 versions
 
-SEGLBL MemTestStart_CONT,  SEG_14, G_14, 0245Ah    ; Original MemTestStart Code continuation
-SEGLBL MemTestStart_PATCH, SEG_14, G_14, 0FFB0h    ; Our patched start of MemTestStart
-SEGLBL MemTestEnd,      SEG_14, G_14, 024B1h    ; End of memtest code
+SEGLBL MemTestStart_CONT,   SEG_14, G_14, 0245Ah    ; Original MemTestStart Code continuation
+SEGLBL MemTestStart_PATCH,  SEG_14, G_14, 0FFB0h    ; Our patched start of MemTestStart
+SEGLBL MemTestEnd,          SEG_14, G_14, 024B1h    ; End of memtest code
 
 ; Original jump to MemtestStart, overwrite to our patch location
     org 2450h
