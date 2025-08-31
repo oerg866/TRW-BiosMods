@@ -173,7 +173,6 @@ def parseMenuItem(ea):
 
     parseAwardString(itemNamePtr)
     parseAwardString(firstOptionPtr)
-    parseAwardString(HelpStrPtr)
 
 
 def parseMenuFromScratch():
