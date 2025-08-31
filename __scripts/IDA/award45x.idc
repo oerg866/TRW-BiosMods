@@ -42,6 +42,7 @@ static Enums_0(id) {
 	add_enum_member(id,"V_ADDY",	0XE,	-1);
 	add_enum_member(id,"V_SUBY",	0XF,	-1);
 	add_enum_member(id,"V_CALLROUTINE",	0X10,	-1);
+	add_enum_member(id,"V_SUBX_V2",	0X13,	-1);
 	id = add_enum(-1,"S_BorderStyle",0x1100000);
 	set_enum_bf(id,1);
 	add_enum_member(id,"DoubleBorder",	0X1,	0x1);
@@ -74,6 +75,7 @@ static ApplyStrucTInfos_0(void) {
 	id = get_struc_id("MenuPageFuncs");
 	id = get_struc_id("S_StrShow");
 	id = get_struc_id("S_CursorChange");
+	id = get_struc_id("S_SubX_V2");
 	id = get_struc_id("S_Border");
 	id = get_struc_id("S_SetPos");
 	id = get_struc_id("S_TextCtrl");
@@ -100,6 +102,7 @@ static Structures_0(id) {
 	id = add_struc(-1,"MenuPageFuncs",0);
 	id = add_struc(-1,"S_StrShow",0);
 	id = add_struc(-1,"S_CursorChange",0);
+	id = add_struc(-1,"S_SubX_V2",0);
 	id = add_struc(-1,"S_Border",0);
 	id = add_struc(-1,"S_SetPos",0);
 	id = add_struc(-1,"S_TextCtrl",0);
@@ -159,6 +162,10 @@ static Structures_0(id) {
 	mid = add_struc_member(id,"string",	0X3,	0x10500400,	BADADDR,	2,	BADADDR,	0,	0x000001);
 	
 	id = get_struc_id("S_CursorChange");
+	mid = add_struc_member(id,"field_0",	0,	0x00800400,	get_enum("stringcodes"),	1);
+	mid = add_struc_member(id,"val",	0X1,	0x00000400,	-1,	1);
+	
+	id = get_struc_id("S_SubX_V2");
 	mid = add_struc_member(id,"field_0",	0,	0x00800400,	get_enum("stringcodes"),	1);
 	mid = add_struc_member(id,"val",	0X1,	0x00000400,	-1,	1);
 	
