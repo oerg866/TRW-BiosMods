@@ -403,6 +403,106 @@ FUNCTION_ISR_IRQ12_PS2Mouse = (
     ]
 )
 
+FUNCTION_EnableDisableCacheIntel = (
+    'EnableDisableCache_Intel',
+    [
+        0x8a, 0xe0,                         # mov ah, al
+        0x0a, 0xe4,                         # or ah, ah
+        0x75, None,                         # jnz short EnableCache
+        0x0f, 0x20, 0xc0,                   # mov eax, cr0
+        0x66, 0x0d, 0x00, 0x00, 0x00, 0x60, # or eax, 60000000h
+        0x0f, 0x22, 0xc0,                   # mov cr0, eax
+        0x0f, 0x09,                         # wbinvd
+        0xeb, None,                         #
+        0x0f, 0x20, 0xc0,                   # mov eax, cr0
+        0x66, 0x25, 0xff, 0xff, 0xff, 0x9f, # and eax, 9fffffffh
+        0x0f, 0x22, 0xc0,                   # mov cr0, eax
+        0x0f, 0x09,                         # wbinvd
+        0xc3                                # retn
+    ],
+    []
+)
+
+FUNCTION_EnableProtMode = (
+    'EnableProtMode',
+    [
+        0x66, 0x60,         # pushad
+        0xe8, None, None,   # call e000_a20_on
+        0x72, None,         # jc short epm_9
+        0x0e, 0x1f,         # push cs, pop ds
+    ],
+    []
+)
+
+FUNCTION_SpuriousInterrupt = (
+    'SpuriousInterrupt',
+    [
+        0x66, 0x50,         # push eax
+        0x52,               # push dx
+        0xb0, 0xb0,         # mov al, 0b0h
+        0xe6, 0x80,         # out 80h, al
+        0x0f, 0x20, 0xc0,   # mov eax, cr0
+    ],
+    []
+)
+
+FUNCTION_ExitProtModeAfterMemtest = (
+    'ExitProtModeAfterMemtest',
+    [
+        0x66, 0x50,     # push eax
+        0x66, 0x56,     # push esi
+        0x8c, 0xd8,     # mov ax, ds
+        0x8e, 0xc0,     # mov es, ax
+        0x8e, 0xe8,     # mov gs, ax
+        0x8e, 0xe0,     # mov fs, ax
+        0xfa,           # cli
+    ],
+    []
+)
+
+FUNCTION_GetDisplaySwitch = (
+    'GetDisplaySwitch',
+    [
+        0xFA,               # cli
+        0x33, 0xc9,         # xor cx, cx
+        0xbb, 0x0f, 0xff,   # mov bx, 0ff0fh
+    ],
+    []
+)
+
+FUNCTION_DetectMemSize = (
+    'DetectMemSize',
+    [
+        0x68, 0x00, 0xe0,                           # push return segment
+        0x68, None, None,                           # push return addr
+        0x68, None, None,                           # push <???>
+        0x68, None, None,                           # push <???>
+        0xEA, None, None, 0x00, 0xF0,               # jmp far locret (near, but in F segment)
+        0xb8, 0x00, 0xf0,                           # mov ax, 0f000h
+        0x8e, 0xd8,                                 # mov ds, ax
+        0x8d, 0x36, 0xed, 0xff,                     # lea si, SystemByte ; (0xfffed)
+        0xe8, (REF_RELATIVE, 'GetDisplaySwitch'),   # call GetSwitch
+        0xe8, None, None,                           # call SpecialKbcInit
+        0xfa,                                       # cli
+        0xb8, 0x00, 0x00,                           # mov ax, RamSegment (0x0000)
+        0x8e, 0xd8,                                 # mov ds, ax
+        0xa3, 0x13, 0x04,                           # mov ds:413h, ax
+    ],
+    []
+)
+FUNCTION_DisplayMemMsg = (
+    'DisplayMemMsg',
+    [
+        0xe8, (REF_RELATIVE, 'ExitProtModeAfterMemtest'),   # call ExitProtModeAfterMemtest
+        0xfb,                                               # sti
+        0x66, 0x50,                                         # push eax
+        0x66, 0x33, 0xc0,                                   # xor eax, eax
+        0x8b, 0xc2,                                         # mov ax, dx
+        0x40,                                               # inc ax
+    ],
+    []
+)
+
 STRUCT_ColorStyle_Default = (
     'ColorStyle_Default',
     [
@@ -435,7 +535,8 @@ STRUCT_BIOS_Version_String2 = (
     b'Award Modular BIOS v4.51',
     [
         ( 'BIOS_VERSION', 0x4510, CONST_OFFSET_IS_VALUE ),
-        ( 'Str_BiosInfo', 0xE0C1, CONST_OFFSET_IS_STRUCT )
+        ( 'Str_BiosInfo', 0xE0C1, CONST_OFFSET_IS_STRUCT ),
+        ( 'Str_BiosString', 0xEC71, CONST_OFFSET_IS_STRUCT )
     ]
 )
 
@@ -496,6 +597,13 @@ COMMON_FUNCTION_LIST = [
     FUNCTION_Reboot,
     FUNCTION_Start_1,
     FUNCTION_ISR_IRQ12_PS2Mouse,
+    FUNCTION_EnableDisableCacheIntel,
+    FUNCTION_EnableProtMode,
+    FUNCTION_SpuriousInterrupt,
+    FUNCTION_ExitProtModeAfterMemtest,
+    FUNCTION_GetDisplaySwitch,
+    FUNCTION_DetectMemSize,
+    FUNCTION_DisplayMemMsg
 ]
 
 COMMON_STRUCT_LIST = [
