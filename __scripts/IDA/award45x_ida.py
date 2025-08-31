@@ -22,6 +22,7 @@ CtrlCharStructNames = {
     14 : 'S_CursorChange',
     15 : 'S_CursorChange',
     16 : 'S_CallRoutine',
+    19 : 'S_SubX',
 }
 
 def setCurrentPosStruct(ctrlChar, ea=here()):
