@@ -4,9 +4,13 @@ This repository is for BIOS modifications of vintage motherboards provided unter
 
 Currently, the following motherboards have custom BIOSES:
 
-* ABIT PW4 (N/A yet, need to clean up the patches)
-* SOYO 4SAW
-* SOYO 4SA2/4SA5
+
+* 486 Class
+    * ABIT PW4 (N/A yet, need to clean up the patches)
+    * SOYO 4SAW
+    * SOYO 4SA2/4SA5
+* Slot 1
+    * Chaintech CT-6SSA2
 
 ## Script files
 
