@@ -1,4 +1,8 @@
 import re
+import ida_bytes
+import ida_name
+import ida_ua
+import ida_funcs
 
 #
 # Find common functions
@@ -728,14 +732,14 @@ def findFuncs_IDA():
             if not ida_bytes.is_code(flags):
 
                 ida_bytes.del_items(funcLoc)
-                success = create_insn(funcLoc) and add_func(funcLoc)
+                success = ida_ua.create_insn(funcLoc) and ida_funcs.add_func(funcLoc)
             
                 if not success:
                     raise Exception(f"Couldn't make function {funcName} at {hex(funcLoc)} in IDA")
             
             # Set the label for this location in the disassembly to the function name
 
-            success = set_name(funcLoc, funcName)
+            success = ida_name.set_name(funcLoc, funcName)
             if not success:
                 raise Exception(f"Couldn't rename function {funcName} in IDA")
 
