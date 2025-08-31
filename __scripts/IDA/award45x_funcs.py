@@ -534,6 +534,18 @@ FUNCTION_GetCPUString_P2P3_V1 = (   # Earlier P2 BIOSes
     ]
 )
 
+FUNCTION_FixupCPUNameSuffixes_P2P3 = (   # Earlier P2 BIOSes
+    'FixupCPUNameSuffixes',
+    [
+        0xe8, (REF_RELATIVE, 'CPUID1'), # call CPUID1
+        0x24, 0xF0,                     # and al, 0f0h
+        0x3c, 0x70,                     # cmp al, 70h
+        0x72, 0x05,                     # jb short <whatever>
+        0xb0, 0x49,                     # mov al, 49h ; 'I' <-- this is how they add I to II to make III for P3s LMFAO.
+    ],
+    []
+)
+
 STRUCT_ColorStyle_Default = (
     'ColorStyle_Default',
     [
@@ -637,6 +649,7 @@ COMMON_FUNCTION_LIST = [
     FUNCTION_DisplayMemMsg,
     FUNCTION_CPUID1,
     FUNCTION_GetCPUString_P2P3_V1,
+    FUNCTION_FixupCPUNameSuffixes_P2P3,
 ]
 
 COMMON_STRUCT_LIST = [

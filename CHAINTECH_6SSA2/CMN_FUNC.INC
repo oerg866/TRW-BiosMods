@@ -49,6 +49,7 @@ BIOS_VERSION                             EQU 04510h
  SEGLBL DisplayMemMsg,                           SEG_14, G_14, 024d4h ; Segment 14
  SEGLBL CPUID1,                                  SEG_14, G_14, 08f70h ; Segment 14
  SEGLBL GetCPUString,                            SEG_14, G_14, 08e1ch ; Segment 14
+ SEGLBL FixupCPUNameSuffixes,                    SEG_14, G_14, 08f41h ; Segment 14
 
 
 ; COMMON BIOS STRUCTURES 
