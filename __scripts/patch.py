@@ -216,6 +216,13 @@ def extract_lzh_all(destination_folder, buffer:bytearray):
     with open(os.path.join(destination_folder, "baserom.bin"), "wb") as baseromfile:
         baseromfile.write(buffer)
 
+    with open(os.path.join(destination_folder, "bootblk.bin"), "wb") as bootblockfile:
+        bootblock = buffer[len(buffer)-0x10000:]
+        # The ROM i could find with the earliest data start after the modules is 0x36000
+        bootblock[0x0000:0x6000] = [0xff] * 0x6000
+        bootblockfile.write(bootblock)
+
+
     return files_extracted
 
 def compress_lzh(in_filename, out_filename):
@@ -296,6 +303,10 @@ def rebuild_rom(source_folder, output_filename):
     with open(os.path.join(source_folder, 'baserom.bin'), 'rb') as baserom:
         rom_data = bytearray(baserom.read())
 
+    bootblock_filename = os.path.join(source_folder, 'bootblk.bin')
+    if (os.path.exists(bootblock_filename)):
+        with open(bootblock_filename, 'rb') as bb:
+            bootblock = bytearray(bb.read())
 
     with open(os.path.join(source_folder, 'files.dat'), 'r') as filelist:
 
@@ -303,6 +314,11 @@ def rebuild_rom(source_folder, output_filename):
 
         # Remove everything before the important data starts
         rom_data[0:uncomp_start_offset] = [0xff] * uncomp_start_offset
+
+        # We have a patched bootblock? Put it in
+        if bootblock is not None:
+            print('Applying patched bootblock')
+            rom_data[len(rom_data)-len(bootblock):] = bootblock
 
         print(f'{hex(uncomp_start_offset)}')
         
