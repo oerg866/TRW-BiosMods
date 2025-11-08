@@ -403,6 +403,31 @@ FUNCTION_ISR_IRQ12_PS2Mouse = (
     ]
 )
 
+FUNCTION_CheckNewHelpFormat = (
+    'CheckNewHelpFormat',
+    [
+        0x60,                                   # pusha
+        0x1e,                                   # push ds
+        0xbe, None, None,                       # mov si, offset <table>
+        0xb9, None, None,                       # mov cx, <table len>
+        0x01, 0xce                              # add si, cx
+    ],
+    []
+)
+
+FUNCTION_EnableInternalCache = (
+    'EnableInternalCache',
+    [
+        0x66, 0x60,                             # pushad
+        0xbb, None, None,                        # mov bx, <offset>
+        0x89, 0xe5,                             # mov bp, sp
+#        0x0f, 0x01, 0xe0,                       # smsw ax
+#        0x83, 0xe0, 0x01,                       # and ax, 1
+#        0xb4, 0x01                              # mov ah, 1
+    ],
+    []
+)
+
 FUNCTION_EnableDisableCacheIntel = (
     'EnableDisableCache_Intel',
     [
@@ -456,6 +481,22 @@ FUNCTION_ExitProtModeAfterMemtest = (
         0x8e, 0xe8,     # mov gs, ax
         0x8e, 0xe0,     # mov fs, ax
         0xfa,           # cli
+    ],
+    []
+)
+
+FUNCTION_QuickMemTest = (
+    'QuickMemTest',
+    [
+        0x68, None, None,               # push return segment
+        0x68, None, None,               # push return addr
+        0x68, None, None,               # push <???>
+        0x68, None, None,               # push <???>
+        0xEA, None, None, 0x00, 0xF0,   # jmp far locret (near, but in F segment)
+        0xfa,                           # cli
+        0xb8, None, None,               # mov ax, g_Segment
+        0x8e, 0xd8,                     # mov ds, ax
+        0x8b, 0x86, None, None,         # mov ax, word ptr <mem>[bp]
     ],
     []
 )
@@ -640,10 +681,13 @@ COMMON_FUNCTION_LIST = [
     FUNCTION_Reboot,
     FUNCTION_Start_1,
     FUNCTION_ISR_IRQ12_PS2Mouse,
+    FUNCTION_CheckNewHelpFormat,
+    FUNCTION_EnableInternalCache,
     FUNCTION_EnableDisableCacheIntel,
     FUNCTION_EnableProtMode,
     FUNCTION_SpuriousInterrupt,
     FUNCTION_ExitProtModeAfterMemtest,
+    FUNCTION_QuickMemTest,
     FUNCTION_GetDisplaySwitch,
     FUNCTION_DetectMemSize,
     FUNCTION_DisplayMemMsg,
