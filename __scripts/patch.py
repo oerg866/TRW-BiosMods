@@ -182,7 +182,7 @@ def extract_lzh_all(destination_folder, buffer:bytearray):
         files_extracted += 1
 
         # Handle system bios
-        if last_arc_segment == 0x5000:
+        if (last_arc_size >= 0x10000 and last_arc_segment == 0x5000):
             print(f'SYSTEM BIOS name is {last_arc_filename}')
             current_arc_checksum = linear_checksum_1(buffer, current_arc_offset, last_arc_size)
             print(f'System BIOS Checksum: {hex(current_arc_checksum)} (calculated) | {hex(buffer[current_arc_offset + last_arc_size])} (in file)')
@@ -332,10 +332,12 @@ def rebuild_rom(source_folder, output_filename):
 
             module_filename, module_orig_compressed_size, module_offset, module_segment = module_entry.rstrip().split(' ')
 
+            module_filename_full = os.path.join(source_folder, module_filename)
+            module_uncompressed_size = os.path.getsize(module_filename_full)
             # Fix F-Segment checksum if needed
 
-            if module_segment == '0x5000':
-                sysbios_filename = os.path.join(source_folder, module_filename)
+            if module_segment == '0x5000' and module_uncompressed_size >= 0x10000:
+                sysbios_filename = module_filename_full
                 with open(sysbios_filename, 'rb') as tmp:
                     sysbios_data = bytearray(tmp.read())
                     print(f'{sysbios_filename} {len(sysbios_data)}')
@@ -361,7 +363,16 @@ def rebuild_rom(source_folder, output_filename):
             offset_written = current_module_offset
 
             # For the system bios we need to add a checksum
-            if module_segment == '0x5000':
+            if module_segment == '0x5000' and module_filename == 'asus.bmp':
+                # This is a hack for ASUS BIOSes. Why the fuck do they save a bitmap file like a sysbios...
+                # I think this always goes at 0x3C000.               
+                offset_written = len(rom_data) - 0x4000 # Guessed from the single time I had to mod an ASUS bios
+                module_orig_compressed_size_int = int(module_orig_compressed_size) + 1 # Overwrite the checksum too
+                rom_data[offset_written:offset_written+module_orig_compressed_size_int] =  [0xff] * module_orig_compressed_size_int
+                rom_data[offset_written:offset_written+len(compressed_data)] = compressed_data
+                print(f'ASUS Bitmap, forcefully compressing into {hex(offset_written)}')
+
+            elif module_segment == '0x5000':
                 checksum = linear_checksum_1(compressed_data, 0, len(compressed_data))
                 print(f'System BIOS checksum: {hex(checksum)}')
 
@@ -373,7 +384,7 @@ def rebuild_rom(source_folder, output_filename):
                     current_module_offset += len(compressed_data) + 1
                 else:
                     # Special case, in this case we need to blank out the previous data in case the new data is smaller
-                    offset_written = len(rom_data) - 131072 # 128K before the end
+                    offset_written = len(rom_data) - 0x20000 # 128K before the end
                     module_orig_compressed_size_int = int(module_orig_compressed_size) + 1 # Overwrite the checksum too
                     rom_data[offset_written:offset_written+module_orig_compressed_size_int] =  [0xff] * module_orig_compressed_size_int
                     rom_data[offset_written:offset_written+len(compressed_data)] = compressed_data
