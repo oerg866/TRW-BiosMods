@@ -644,6 +644,7 @@ STRUCT_SetupMenuCopyright_String = (
 
 DATA_PTR = 0
 DATA_WORD_AT_ADDR = 1
+DATA_BYTE = 2
 
 DATA_GenericStructures = (
     #  Label                        Seg  Offset  Type (pointer or dereferenced)
@@ -871,6 +872,9 @@ def readGenericData(data, datalist):
         elif dataType == DATA_WORD_AT_ADDR:
             absolute = getAbsoluteAddress(len(data), dataSegment, dataOffset)
             val = getConstantFromData(data, absolute, CONST_WORD)
+        elif dataType == DATA_BYTE:
+            absolute = getAbsoluteAddress(len(data), dataSegment, dataOffset)
+            val = getConstantFromData(data, absolute, CONST_BYTE)
         else:
             raise Exception('Invalid data type')
 
