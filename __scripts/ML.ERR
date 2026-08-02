@@ -15,7 +15,7 @@ error count exceeds 100; stopping assembly
 invalid numerical command-line argument
 too many arguments
 statement too complex
-N/A
+Internal Assembler Error
 missing source filename
 COFF error writing file
 invalid debug and browser data; file exceeds line limit
@@ -86,7 +86,7 @@ forced error : strings not equal
 [ELSE]IF2/.ERR2 not allowed : single-pass assembler
 expression too complex for .UNTILCXZ
 can ALIGN only to power of 2
-structure alignment must be 1, 2, or 4
+structure alignment must be 1, 2, 4, 8, or 16
 expected
 incompatible CPU mode and segment size
 LOCK must be followed by a memory operation
@@ -235,7 +235,9 @@ reference to forward macro definition
 16 bit segments not allowed with /coff option
 FAR not allowed in flat model comm variables
 invalid .model parameter for flat model
-.ALIAS directive not supported with /coff option
+ALIAS name is empty
+GROUP directive not allowed with /coff option
+.FPO is not compatible with nested procedures
 LEVEL 1
 cannot modify READONLY segment
 N/A
@@ -251,10 +253,16 @@ expected '>' on text literal
 multiple .MODEL directives found : .MODEL ignored
 line number information for segment without class 'CODE'
 instructions and initialized data not supported in AT segments
+instructions and initialized data not supported in BSS segments
 directive ignored with /coff switch
 /Gc switch incompatible with flat model
 /AT switch incompatible with flat model
 invalid command-line option
+directive ignored without /coff switch
+directive ignored outside a procedure
+LOADDS ignored in flat model
+debug information too complex for 
+with /coff switch, leading underscore required for start address
 LEVEL 2
 @@: label defined but not referenced
 expression expected, assume value 0
@@ -270,3 +278,4 @@ N/A
 conditional jump lengthened
 procedure argument or local not referenced
 expression may be pass-dependent
+structure contains no members
