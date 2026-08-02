@@ -859,7 +859,7 @@ def findPatterns(data, patternlist):
     return foundItems, foundConsts
 
 def getAbsoluteAddress(length, segment, offset):
-    actualSegment = (length >> 16) - (16 - segment)
+    actualSegment = (length >> 16) - (15 - segment)
     return (actualSegment << 16) | offset
 
 def readGenericData(data, datalist):
