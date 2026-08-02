@@ -945,7 +945,11 @@ def findFuncs_IDA():
 
             if not ida_bytes.is_code(flags):
 
-                ida_bytes.del_items(funcLoc)
+                ida_bytes.del_items(
+                    funcLoc,
+                    ida_bytes.DELIT_SIMPLE,
+                    1
+                )
                 success = ida_ua.create_insn(funcLoc) and ida_funcs.add_func(funcLoc)
             
                 if not success:
