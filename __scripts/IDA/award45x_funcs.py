@@ -403,6 +403,116 @@ FUNCTION_ISR_IRQ12_PS2Mouse = (
     ]
 )
 
+FUNCTION_Wait_Refresh = (
+    'Wait_Refresh',
+    [
+        0x2e, 0xf6, 0x06, 0xe2, 0xff, 0xc0, # test cs:ffe2h, 0c0h
+        0x74, 0x05,                         # jz ....
+        0x79, 0x03,                         # jns ....
+        0xeb, 0x1d,                         # jmp short ...
+    ],
+    []
+)
+
+FUNCTION_Mouse_CheckDataPacket = (
+    'Mouse_CheckDataPacket',
+    [
+        0xb9, 0xa5, 0x00,       # mov cx, 0a5h
+        0xe4, 0x64,             # in al, 64h
+        0xeb, 0x00, 0xeb, 0x00, # IODELAY
+        0xfb,                   # sti
+        0x24, 0x21,             # and al, 21h
+        0x3c, 0x21,             # cmp al, 21h
+        0x74, 0x22,             # jz short locret
+    ],
+    []
+)
+
+FUNCTION_APM_Service_V1 = (
+    'APM_Service',
+    [
+        # push.... a lot of shit
+        0xfa, 0x55, 0x1e, 0x06, 0x56, 0x57, 0x52, 0x51, 0x53, 0x66, 0x50,
+        0x8b, 0xec,             # mov bp, sp
+        0x83, 0x66, 0x18, 0xfe, # and word ptr [bp+18h], 0fffeh
+    ],
+    []
+)
+
+FUNCTION_APM_Service_V2 = (
+    'APM_Service',
+    [
+        # push a lot of shit
+        0x9c, 0xfa, 0x56, 0x1e, 0x50,
+        0xe8, None, None,   # Call ...
+        0x8e, 0xd8,         # mov ds, ax
+    ],
+    []
+)
+
+FUNCTION_Int15h_Handler_V1 = (
+    'Int15h_Handler',
+    [
+        # Same as below but starts witha n STI instruction
+        0xfb,                                   # sti
+        0x80, 0xfc, 0x53,                       # cmp ah, 53h
+        0x75, 0x03,                             # jnz short ...
+        0xe9, (REF_RELATIVE, 'APM_Service'),    # jmp apm_service
+    ],
+    []
+)
+
+FUNCTION_Int15h_Handler_V2 = (
+    'Int15h_Handler',
+    [
+        0x80, 0xFC, 0x53,                       # cmp ah, 53h
+        0x75, 0x03,                             # jnz short ...
+        0xe9, (REF_RELATIVE, 'APM_Service'),    # jmp apm_service
+    ],
+    []
+)
+
+FUNCTION_Int15h_CheckMouse = (
+    'Int15_CheckMouse',
+    [
+        0x80, 0xfc, 0xc1,       # cmp ah, 0c1h
+        0x0f, 0x85, 0x03, 0x00, # jnz ...
+        # This snippet exists in BIOSes that have
+        # No mouse support, it points to a dummy handler in this case.
+        # Since we can't uniquely identify nullsubs,
+        # we have to do a wildcard here.
+        0xe9, None, None,       # jmp Int15_MouseFunction
+        0x80, 0xfc, 0xc2,       # cmp ah, 0c2h
+        0x0f, 0x85, 0x03, 0x00, # jnz ...
+        0xe9, None, None,       # jmp Int15_MouseFunction
+    ],
+    []
+)
+
+FUNCTION_Int15h_MouseFunction = (
+    'Int15h_MouseFunction',
+    [
+        0x2e, 0xf6, 0x06, 0xfa, 0xe6, 0x04, # test cs:[E6FA], 4
+        0x75, 0x03,                         # jnz short ...
+        0xe9, None, None,                   # jmp <skipmouse>
+        0x06,                               # push es
+    ],
+    []
+)
+
+FUNCTION_MouseInstall = (
+    'MouseInstall',
+    [
+        0xb8, 0x00, 0xf0,                   # mov ax, 0f000h
+        0x8e, 0xd8,                         # mov ds, ax
+        0xf6, 0x06, 0xec, 0xff, 0x80,       # test byte ptr [ffec], 80h
+        0x75, 0x03,                         # jnz short InstallYes
+        0xe9, None, None,                   # jmp locret
+        0xb8, 0x00, 0x00,                   # mov ax, 0
+    ],
+    []
+)
+
 FUNCTION_CheckNewHelpFormat = (
     'CheckNewHelpFormat',
     [
@@ -558,6 +668,44 @@ FUNCTION_CPUID1 = (   # Earlier P2 BIOSes
     ]
 )
 
+FUNCTION_GetCPUString_486_V1 = (            # 2A4UKS21 courtesy of Jan Steunebrink
+    'GetCPUString',
+    [
+        0x8A, 0x46, 0x3D,                   # mov al, [bp+PROC_ID]
+        0x24, 0x7F,                         # and aL, 7Fh
+        0x3C, 0x3F,                         # cmp al, 3Fh
+        0x90, 0x90,                         # nop nop :3
+        0xBE, None, None,                   # mov si, offset CPUSTR_Unknown
+        0x77, None,                         # ja short *
+        0xD0, 0xE0,                         # shl al, 1
+        0x0F, 0xB6, 0xF0,                   # movzx si, al
+        0x2E, 0x8B, 0xB4, None, None,       # mov si, word ptr cs:[si+CPUNameTable]
+    ],
+    [
+        ( 'CPUSTR_Unknown', 10, CONST_WORD ),
+        ( 'CPUNameTable', 22, CONST_WORD ),
+    ]
+)
+
+FUNCTION_GetCPUString_486_V2 = (            # SOYO 025L
+    'GetCPUString',
+    [
+        0x8A, 0x46, 0x3D,                   # mov al, [bp+PROC_ID]
+        0x24, 0x7E,                         # and al, 7Eh
+        0x90, 0x90,                         # nop nop :3
+        0x3C, 0x4C,                         # cmp al, 4Ch
+        0x90, 0x90,                         # nop nop :3
+        0xBE, None, None,                   # mov si, offset CPUSTR_Unknown
+        0x77, None,                         # ja short *
+        0x0F, 0xB6, 0xF0,                   # movzx si, al
+        0x2E, 0x8B, 0xB4, None, None,       # mov si, word ptr cs:[si+CPUNameTable]
+    ],
+    [
+        ( 'CPUSTR_Unknown', 12, CONST_WORD ),
+        ( 'CPUNameTable', 22, CONST_WORD ),
+    ]
+)
+
 FUNCTION_GetCPUString_P2P3_V1 = (   # Earlier P2 BIOSes
     'GetCPUString',
     [
@@ -575,6 +723,41 @@ FUNCTION_GetCPUString_P2P3_V1 = (   # Earlier P2 BIOSes
     ]
 )
 
+FUNCTION_CalculateBusSpeed_486 = (
+    'CalculateBusSpeed',
+    [
+        0x32, 0xff,             # xor bh, bh
+        0x8b, 0xc3,             # mov ax, bx
+        0xb3, 0x01,             # mov bl, 1
+        0xf6, 0x46, 0x3f, 0x80, # test byte ptr [bp+3Fh], 80h
+        0x74, 0x04,             # jz short ...
+        0xb3, 0x03,             # mov bl, 3
+        0xeb, 0x08,             # jmp short ...
+        0xf6, 0x46, 0x3f, 0x40, # test byte ptr [bp+3Fh], 40h
+        0x74, 0x02,             # jz short ...
+        0xb3, 0x02,             # mov bl, 2
+        0xf6, 0xf3,             # div bl
+    ],
+    []
+)
+
+FUNCTION_InitCpuTypeFromTable_486 = (
+    'InitCpuTypeFromTable',
+    [
+        0xBE, None, None,       # mov si, offset CPUSupportTable
+        0x2E, 0x8B, 0x04,       # mov ax, cs:[si]
+        0x2E, 0x3B, 0x54, 0x02, # cmp dx, cs:[si+2]
+        0x72, 0x06,             # jb short ...
+        0x2E, 0x3B, 0x54, 0x04, # cmp dx, cs:[si+4]
+        0x76, 0x05,             # jbe short ...
+    ],
+    [
+        ( 'CPUSupportTable', 0x2, CONST_WORD ),        
+    ]
+)
+
+
+
 FUNCTION_FixupCPUNameSuffixes_P2P3 = (   # Earlier P2 BIOSes
     'FixupCPUNameSuffixes',
     [
@@ -585,6 +768,162 @@ FUNCTION_FixupCPUNameSuffixes_P2P3 = (   # Earlier P2 BIOSes
         0xb0, 0x49,                     # mov al, 49h ; 'I' <-- this is how they add I to II to make III for P3s LMFAO.
     ],
     []
+)
+
+FUNCTION_ReadCMOSByte_V1 = (
+    'ReadCMOSByte',
+    [
+        0x87, 0xdb,                     # xchg bx, bx
+        0xe6, 0x70,                     # out 70h, al
+        0xe3, 0x00, 0xe3, 0x00,         # iodelay
+        0x87, 0xdb,                     # xchg bx, bx
+        0xe4, 0x71,                     # in al, 71h
+        0xe3, 0x00, 0xe3, 0x00,         # iodelay
+        0xc3                            # retn
+    ],
+    []
+)
+
+FUNCTION_ReadCMOSByte_V2 = (
+    'ReadCMOSByte',
+    [
+        0x87, 0xdb,                     # xchg bx, bx
+        0x90,                           # nop
+        0xe6, 0x70,                     # out 70h, al
+        0xe3, 0x00, 0xe3, 0x00,         # iodelay
+        0x87, 0xdb,                     # xchg bx, bx
+        0xe4, 0x71,                     # in al, 71h
+        0xe3, 0x00, 0xe3, 0x00,         # iodelay
+        0xc3                            # retn
+    ],
+    []
+)
+
+FUNCTION_WriteCMOSByte = (
+    'WriteCMOSByte',
+    [
+        0x90,                           # nop
+        0xe6, 0x70,                     # out 70h, al
+        0xe3, 0x00,                     # jcxz short $+2
+        0xe3, 0x00,                     # jcxz short $+2
+        0x86, 0xc4,                     # xchg al, ah
+        0xe6, 0x71,                     # out 71h, al
+        0xe3, 0x00,                     # jcxz short $+2
+        0xe3, 0x00,                     # jcxz short $+2
+        0xc3                            # retn
+    ],
+    []
+)
+
+FUNCTION_Out_8042 = (
+    'Out_8042',
+    [
+        0x8a, 0xe0,
+        0xe8, None, None,
+        0x0f, 0x85, 0x07, 0x00,
+        0x8a, 0xc4,
+        0xe6, 0x64,
+        0xe8, None, None,
+        0xc3,
+    ],
+    []
+)
+
+FUNCTION_Out_8042_Full = (
+    'Out_8042_Full',
+    [
+        0xb4, 0x0c,
+        0x33, 0xc9,
+        0xe4, 0x64,
+        0xe7, 0xe1,
+        0xa8, 0x01,
+    ],
+    []
+)
+
+FUNCTION_SendCommandToKBC = (
+    'SendCommandToKBC',
+    [
+        0x53,                               # push bx
+        0xb4, 0x20,                         # mov ah, 20h
+        0x51,                               # push cx
+        0x50,                               # push ax
+        0xfa,                               # cli
+        0x58,                               # pop ax
+        0x59,                               # pop cx
+        0x51,                               # push cx
+        0x50,                               # push ax
+        0x8a, 0xc1,                         # mov al, cl
+        0xe8, (REF_RELATIVE, 'Out_8042')    # call Out_8042
+    ],
+    []
+)
+
+FUNCTION_Out_8042_Aux = (
+    'Out_8042_Aux',
+    [
+        0xb1, 0xd4,                                 # mov cl, 0D4h
+        0xe8, (REF_RELATIVE, 'SendCommandToKBC'),   # call SedCommandToKBC
+        0xc3                                        # retn
+    ],
+    []
+)
+
+FUNCTION_Out_8042_Aux_Full = (
+    'Out_8042_Aux_Full',
+    [
+        0xe8, (REF_RELATIVE, 'Out_8042_Full'),  # call Out_8042_Full
+        0x74, 0x02,                             # jz short locret
+        0xa8, 0x20,                             # test al, 20h
+        0xc3                                    # retn
+    ],
+    []
+)
+
+FUNCTION_DisableAOBFIrq = (
+    'DisableAOBFIrq',
+    [
+        0xb1, 0x60,                                 # mov cl, 60h
+        0xb0, 0x65,                                 # mov al, 65h
+        0xe8, (REF_RELATIVE, 'SendCommandToKBC')    # call SendCommandToKBC
+    ],
+    []
+)
+
+FUNCTION_EnableAOBFIrq = (
+    'EnableAOBFIrq',
+    [
+        0xb1, 0x60,                                 # mov cl, 60h
+        0xb0, 0x47,                                 # mov al, 47h
+        0xe8, (REF_RELATIVE, 'SendCommandToKBC')    # call SendCommandToKBC
+    ],
+    []
+)
+
+FUNCTION_SetupMouse = (
+    'SetupMouse',
+    [
+        0xb8, 0x00, 0x00,                       # mov ax, 0
+        0x8e, 0xd8,                             # mov ds, ax
+        0x80, 0x26, 0x10, 0x04, 0xfb,           # and ds:410h, 0fbh
+        0xfa,                                   # cli
+        0xb0, 0x20,                             # mov al, 20h
+        0xe8, (REF_RELATIVE, 'Out_8042'),       # call...
+        0xe8, (REF_RELATIVE, 'Out_8042_Full'),  # call...
+    ],
+    []
+)
+
+FUNCTION_SetupMouse_SetIRQ12Handler = (
+    'SetupMouse_SetIRQ12Handler',
+    [
+        0x8c, 0xc8,                             # mov ax, cs
+        0xc7, 0x06, 0xd0, 0x01, None, None,     # mov ds:1d0h, <handler>
+        0xa3, 0xd2, 0x01,                       # mov ds:1d2h, ax
+    ],
+    [        
+        ( 'IRQ12Handler', 0x6, CONST_WORD ),
+    ]
 )
 
 STRUCT_ColorStyle_Default = (
@@ -650,12 +989,16 @@ DATA_GenericStructures = (
     #  Label                        Seg  Offset  Type (pointer or dereferenced)
     ( 'Sys_ChipsetInitTablePtr',    0xF, 0xF85F, DATA_PTR ),
     ( 'Sys_ChipsetInitTableendPtr', 0xF, 0xF861, DATA_PTR ),
+    ( 'Sys_BiosConfigTable',        0xF, 0xE6F5, DATA_PTR ),
+    ( 'Sys_BiosSupportedFeatures',  0xF, 0xFFEC, DATA_PTR ),
+    ( 'CONST_BiosSupportedFeatures',  0xF, 0xFFEC, DATA_BYTE ),
 #    ( 'Sys_ChipsetInitTable',       0xF, 0xF85F, DATA_WORD_AT_ADDR ),
 #    ( 'Sys_ChipsetInitTable_End',   0xF, 0xF861, DATA_WORD_AT_ADDR ),
 )
 
 COMMON_FUNCTION_LIST = [
     FUNCTION_Display_String,
+    FUNCTION_Display_CS_String,
     FUNCTION_DispStr_RestoreTextAttr,
     FUNCTION_Write_Character1,
     FUNCTION_Write_Character2,
@@ -682,7 +1025,16 @@ COMMON_FUNCTION_LIST = [
     FUNCTION_Reboot,
     FUNCTION_Start_1,
     FUNCTION_ISR_IRQ12_PS2Mouse,
+    FUNCTION_Wait_Refresh,
+    FUNCTION_Mouse_CheckDataPacket,
     FUNCTION_CheckNewHelpFormat,
+    FUNCTION_APM_Service_V1,
+    FUNCTION_APM_Service_V2,
+    FUNCTION_Int15h_Handler_V1,
+    FUNCTION_Int15h_Handler_V2,
+    FUNCTION_Int15h_CheckMouse,
+    FUNCTION_Int15h_MouseFunction,
+    FUNCTION_MouseInstall,
     FUNCTION_EnableInternalCache,
     FUNCTION_EnableDisableCacheIntel,
     FUNCTION_EnableProtMode,
@@ -693,8 +1045,23 @@ COMMON_FUNCTION_LIST = [
     FUNCTION_DetectMemSize,
     FUNCTION_DisplayMemMsg,
     FUNCTION_CPUID1,
-    FUNCTION_GetCPUString_P2P3_V1,
+    FUNCTION_GetCPUString_486_V1,
+    FUNCTION_GetCPUString_486_V2,
+    FUNCTION_CalculateBusSpeed_486,
+    FUNCTION_InitCpuTypeFromTable_486,
     FUNCTION_FixupCPUNameSuffixes_P2P3,
+    FUNCTION_ReadCMOSByte_V1,
+    FUNCTION_ReadCMOSByte_V2,
+    FUNCTION_WriteCMOSByte,
+    FUNCTION_Out_8042,
+    FUNCTION_Out_8042_Full,
+    FUNCTION_SendCommandToKBC,
+    FUNCTION_Out_8042_Aux,
+    FUNCTION_Out_8042_Aux_Full,
+    FUNCTION_DisableAOBFIrq,
+    FUNCTION_EnableAOBFIrq,
+    FUNCTION_SetupMouse,
+    FUNCTION_SetupMouse_SetIRQ12Handler
 ]
 
 COMMON_STRUCT_LIST = [
