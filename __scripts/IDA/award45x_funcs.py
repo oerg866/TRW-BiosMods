@@ -828,6 +828,18 @@ def findPatterns(data, patternlist):
         ea = findSinglePattern(data, name, pattern, foundItems)
 
         if ea is not None:
+            known = False
+
+            # Check if we already know a matched pattern with this name
+            # This is not a big deal, but we need to prevent it from being added
+            # to the list in order to avoid IDA errors later
+            for knownItem in foundItems:
+                if knownItem[0] == name:
+                    print(f'WARNING: Duplicate pattern; "{name}" is already known!')
+                    known = True
+
+            if known: continue
+
             foundItems.append((name, ea))
 
             matchSegment = getSegment(len(data), ea)
