@@ -718,7 +718,7 @@ def getBytesFromWord(word):
     word &= 0xFFFF
     return word & 0xff, word >> 8
 
-def findSinglePattern(data, pattern, knownPatterns=None):
+def findSinglePattern(data, name, pattern, knownPatterns=None):
     regex = bytearray()
 
     referencesToCheck = []
@@ -740,8 +740,8 @@ def findSinglePattern(data, pattern, knownPatterns=None):
 
             found = False
 
-            for name, ea in knownPatterns:
-                if name == referenceLabel:
+            for knownName, ea in knownPatterns:
+                if knownName == referenceLabel:
                     #                           offset, type of reference, label of reference, absolute offset of the reference
                     referencesToCheck.append( (curPos, referenceType, referenceLabel, ea) )
                     found = True
@@ -749,7 +749,7 @@ def findSinglePattern(data, pattern, knownPatterns=None):
             # We don't know this function, so we can't process this one!
 
             if not found:
-                print(f'Error: Function {referenceLabel} requested by pattern is not known yet! Skipping pattern scan')
+                print(f'Error: Function {referenceLabel} requested by pattern {name} is not known yet! Skipping pattern scan')
                 return None
 
             # Add placeholders for now
@@ -825,7 +825,7 @@ def findPatterns(data, patternlist):
     foundConsts = []
     for name, pattern, constants in patternlist:
         #print(f'{name} {pattern}')
-        ea = findSinglePattern(data, pattern, foundItems)
+        ea = findSinglePattern(data, name, pattern, foundItems)
 
         if ea is not None:
             foundItems.append((name, ea))
