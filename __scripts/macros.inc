@@ -19,6 +19,11 @@ POSTCODE MACRO CODE
             pop ax
             ENDM
 
+IODELAY macro
+    jmp short $+2
+    jmp short $+2
+    endm
+
 AwardChipsetRegisters struc ; (sizeof=0x7, mappedto_1)
 ItemType            db ?
 Index               db ?
@@ -106,3 +111,19 @@ field_0         db V_POS
 x               db ?
 y               db ?
 S_SetPos        ends
+
+CPU_Support_Entry_486 struc
+CMOS_PROC_ID_3D db ?
+CMOS_DATA_3F    db ?
+ResetID_FROM    dw ?
+ResetID_TO      dw ?
+CPU_Support_Entry_486 ends
+
+
+; Misc Constants
+KBC_DataPort            EQU 60h ; Keyboard controller data port
+Bios_RAM_Segment        EQU 40h ; BIOS internal RAM segment
+
+RAM_ExtData_Segment_ID  EQU 0Eh ; 40:0E Offset in BIOS RAM that contains the extended data segment identifier
+RAM_Bios_Hardware       EQU 10h ; 40:10 Installed hardware
+
