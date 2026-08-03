@@ -180,13 +180,16 @@ Mouse_CheckDataPacket_Loop:
     loop Mouse_CheckDataPacket_Loop
 
     and byte ptr ds:Mouse_CountIndex, 0f8h
-    mov ax, ds
-    mov es, ax
+;;    mov ax, ds
+;;    mov es, ax
+    push ds
+    pop es
     assume es:nothing
     cld
 
-; Copy aux data buffer (unsure what this does)
-    lea di, ds:Mouse_AuxData
+; Clear aux data buffer
+;;    lea di, ds:Mouse_AuxData
+    mov di, offset Mouse_AuxData
     xor ax, ax
     stosw
     stosw
