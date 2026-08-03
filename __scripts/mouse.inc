@@ -869,14 +869,25 @@ Int15h_ContinueProcessing:
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Packet size translation table
-size1:  db 6                ; 1
-size2:  db 6,7              ; 2
-size3:  db 6,4,2            ; 3
-size4:  db 6,7,4,2          ; 4
-size5:  db 6,4,2,5,3        ; 5
+;;size1:  db 6                ; 1
+;;size2:  db 6,7              ; 2
+;;size3:  db 6,4,2            ; 3
+;;size4:  db 6,7,4,2          ; 4
+;;size5:  db 6,4,2,5,3        ; 5
+;;size6:  db 6,7,4,2,5,3      ; 6
+;;size7:  db 6,4,2,0,5,3,1    ; 7
+;;size8:  db 6,7,4,2,0,5,3,1  ; 8
+
+;; Some of these can be expressed as pars of others
+
+size1:
+size2:
+size4:
 size6:  db 6,7,4,2,5,3      ; 6
+size3:
 size7:  db 6,4,2,0,5,3,1    ; 7
 size8:  db 6,7,4,2,0,5,3,1  ; 8
+size5:  db 6,4,2,5,3        ; 5
 
 PacketSizeTable:
 		dw	offset size1
