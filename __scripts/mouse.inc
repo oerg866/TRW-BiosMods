@@ -62,12 +62,13 @@ SEG_15 SEGMENT USE16 PARA PUBLIC 'CODE'
     org 0
 
 IRQ12_New:
-    push ax
-    push bx
-    push cx
-    push si
-    push di
-    push bp
+;;    push ax
+;;    push bx
+;;    push cx
+;;    push si
+;;    push di
+;;    push bp
+    pusha
     push ds
     push es
     cld
@@ -150,12 +151,13 @@ IRQ12_Exit:
     out 020h, al
     pop es
     pop ds
-    pop bp
-    pop di
-    pop si
-    pop cx
-    pop bx
-    pop ax
+;;    pop bp
+;;    pop di
+;;    pop si
+;;    pop cx
+;;    pop bx
+;;    pop ax
+    popa
     iret
 
 Mouse_CheckDataPacket:
