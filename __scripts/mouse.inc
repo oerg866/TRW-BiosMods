@@ -159,7 +159,6 @@ IRQ12_Exit:
     pop ax
     iret
 
-
 Mouse_CheckDataPacket:
     ; Loop count
     mov cx, 5*33
@@ -207,13 +206,11 @@ Int15h_MouseFunction:
     jmp Int15h_ContinueProcessing
 ; ---------------------------------------------------------------------------
 Int15h_MouseFunction_Process:
+; [o866] size opt, we wont reach this code path if the mouse isnt present since this is checked earlier
+; so get rid of it
+
+IF 0
     ; Check if mouse present
-;;;; FUTURE OPT
-;    push ds
-;    push word ptr 0 ; Don't know how to force it to push a word otherwise
-;    pop ds
-;    test byte ptr ds:RAM_Bios_Hardware, 4
-;    pop ds
     push es
     push Bios_RAM_Segment
     pop es
@@ -226,9 +223,15 @@ Int15h_MouseFunction_Process:
     ; Mouse not present, go back to int15 main path
     jmp Int15h_ContinueProcessing
 Int15h_MousePresent:
-    cmp ah, 0C1h
-    jz Int15h_C1_Handler
-    jmp Int15h_C2_Handler
+ENDIF
+
+; [o866] size opt
+;    cmp ah, 0C1h
+;    jz Int15h_C1_Handler
+;    jmp Int15h_C2_Handler
+    cmp ah, 0C2h
+    jz short Int15h_C2_Handler
+    ; fallthrough
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Int15h Function C1 Handler - Get Extended Data Segment
@@ -752,7 +755,6 @@ ReadAuxData_ReadData:
 ReadAuxData_Exit:
     pop cx
     ret
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Bend Int15 handler to call our MouseFunction...function for C1/C2
