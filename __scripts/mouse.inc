@@ -117,7 +117,7 @@ IRQ12_DoFarCall:
     ; Get Translation Table Address for our packet size
     mov si, bx
     shl si, 1
-    lea bx, PacketSizeTable
+    lea bx, cs:PacketSizeTable
     mov bx, word ptr cs:[bx+si]
 
     ; Set and clear stack
@@ -345,7 +345,7 @@ Int15h_C2_ErrorExit:
     ; Set carry flag in stack frame
     or Int15h_C2_BP_Flags, 01h
 Int15h_C2_Exit:
-    ;; [o866] size opt, we expect error code in al here
+    ;; [o866] size opt, we expect error code in al here and Int15h_C2_BP_Flags already set
     mov Int15h_C2_BP_Error, al
     ; Re-Enable AOBF IRQ
     call EnableAOBFIrq
@@ -643,12 +643,15 @@ Int15h_C2_MouseInit:
 
 Int15h_C2_MouseInit_Valid:
     ; Zero old packet size and set to new value
-    and byte ptr ds:Mouse_PacketSizeFlags, 0f8h
-;;    mov al, Int15h_C2_BP_Command
-;;    dec al
-;;    or byte ptr ds:Mouse_PacketSizeFlags, al
-    ;; bh has our corrected value already
-    or byte ptr ds:Mouse_PacketSizeFlags, bh
+;;    and byte ptr ds:Mouse_PacketSizeFlags, 0f8h
+;;;;    mov al, Int15h_C2_BP_Command
+;;;;    dec al
+;;;;    or byte ptr ds:Mouse_PacketSizeFlags, al
+;;    ;; bh has our corrected value already
+;;    or byte ptr ds:Mouse_PacketSizeFlags, bh
+    mov si, Mouse_PacketSizeFlags   ; save ONE byte :DDD
+    and byte ptr ds:[si], 0f8h
+    or byte ptr ds:[si], bh
 
     ; Try reset command 3 times
     mov bh, 3
