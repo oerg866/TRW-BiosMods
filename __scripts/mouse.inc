@@ -260,16 +260,19 @@ Int15h_C1_Handler:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Int15h Function C2 Handler - Pointing Device Interface
 Int15h_C2_Handler:
-    ; is function valid?
-    test al, 0F8h
-    jz short Int15h_C2_FunctionIsValid
-    ; Function is invalid, exit
-    mov ah, Int15h_AH_InvalidFunction
-    stc
-    retf 2
+;;    ; is function valid?
+;;    test al, 0F8h
+;;    jz short Int15h_C2_FunctionIsValid
+;;    ; Function is invalid, exit
+;;    mov ah, Int15h_AH_InvalidFunction
+;;    stc
+;;    retf 2
+;;
+;; Int15h_C2_FunctionIsValid:
+;;    ; Function is valid, continue processing
 
-Int15h_C2_FunctionIsValid:
-    ; Function is valid, continue processing
+;;  ^ this is moved further down so we can use our usual error code path to save some bytes
+
     ; Build a stack frame
     push ax   ; [bp+10]
     push bx   ; [bp+0e]
@@ -284,7 +287,14 @@ Int15h_C2_FunctionIsValid:
 
     ; [o866] size opt
     ; Disable Aux output buffer full (AOBF) interrupt
+    push ax
     call DisableAOBFIrq
+    pop ax
+
+;; [o866] insert validity check here.. less performant but WAY smaller
+    test al, 0f8h
+    jnz short Int15h_C2_InvalidFunctionError
+
     push Bios_RAM_Segment
     pop ds
     push [word ptr ds:RAM_ExtData_Segment_ID]
