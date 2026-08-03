@@ -939,7 +939,13 @@ ReadAuxData_ErrorCheck:
 ; to the C2 interface error!!
 Out_8042_Aux_NoReturnOnError:
     call Out_8042_Aux
-    jmp short ReadAuxData_ErrorCheck
+Out_8042_Aux_NoReturnOnError_ErrorCheck:
+    jnz short ReadAuxData_Error
+    jz short ReadAuxData_ReturnInstruction
+
+Int15h_C2_WaitAck_NoReturnOnError:
+    call Int15h_C2_WaitAck
+    jmp short Out_8042_Aux_NoReturnOnError_ErrorCheck
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
