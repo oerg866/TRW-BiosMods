@@ -740,11 +740,16 @@ Int15h_C2_ExtendedCommand_Scale21_SendOK:
 ; Int15h C2 SubFunction 7: Set Device Driver Far Call address
 ; ES:BX on stack frame = Driver's far call address
 Int15h_C2_SetDriverFarCall:
-    mov ax, Int15h_C2_BP_Segment
-    mov word ptr ds:Mouse_FarCallSegment, ax
-    mov ax, Int15h_C2_BP_Offset
-    mov word ptr ds:Mouse_FarCallOffset, ax
-    or byte ptr ds:Mouse_PacketSizeFlags, Mouse_DriverFarCallFlag
+;;    mov ax, Int15h_C2_BP_Segment
+;;    mov word ptr ds:Mouse_FarCallSegment, ax
+;;    mov ax, Int15h_C2_BP_Offset
+;;    mov word ptr ds:Mouse_FarCallOffset, ax
+;;    or byte ptr ds:Mouse_PacketSizeFlags, Mouse_DriverFarCallFlag
+    mov si, offset Mouse_FarCallOffset
+    mov ds:[si], bx
+    mov ds:[si+2], es
+    or byte ptr ds:[si+5], Mouse_DriverFarCallFlag
+
     ; This routine can't fail but it really ought to on NULL or something...
     jmp Int15h_C2_Success
 
