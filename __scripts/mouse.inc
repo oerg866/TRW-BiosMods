@@ -387,17 +387,22 @@ Int15h_C2_ResetMouse_TryLoop:
 
 Int15h_C2_ResetMouse_GetID:
     ; Read Aux Buffer Data First byte
-    call ReadAuxData
-    ; Read failed? Get out
-    jz short Int15h_C2_InterfaceError
-    ; Read OK
+;;    call ReadAuxData
+;;    ; Read failed? Get out
+;;    jz short Int15h_C2_InterfaceError
+;;    ; Read OK
+;;    mov Int15h_C2_BP_bl, al
+;;
+;;    ; Do this once more for 2nd byte
+;;    call ReadAuxData
+;;    jz short Int15h_C2_InterfaceError
+;;    mov Int15h_C2_BP_bh, al
+
+;; [o866] we can assume that if this call returns, it was successful.
+    call ReadAuxData_NoReturnOnError
     mov Int15h_C2_BP_bl, al
-
-    ; Do this once more for 2nd byte
-    call ReadAuxData
-    jz short Int15h_C2_InterfaceError
+    call ReadAuxData_NoReturnOnError
     mov Int15h_C2_BP_bh, al
-
     jmp Int15h_C2_Success
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -767,7 +772,20 @@ ReadAuxData_ReadData:
     in al, KBC_DataPort
 ReadAuxData_Exit:
     pop cx
+ReadAuxData_ReturnInstruction:
     ret
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; SIZE OPTIMIZATION!!!!
+; This one does NOT return on error, instead it pops the return address and moves DIRECTLY
+; to the C2 interface error!!
+ReadAuxData_NoReturnOnError:
+    call ReadAuxData
+    ; Read OK, return like normal
+    jnz short ReadAuxData_ReturnInstruction
+    add sp, 2
+    jmp Int15h_C2_InterfaceError
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Bend Int15 handler to call our MouseFunction...function for C1/C2
