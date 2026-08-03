@@ -287,7 +287,7 @@ Int15h_C2_FunctionIsValid:
     call DisableAOBFIrq
     push Bios_RAM_Segment
     pop ds
-    push [word ptr es:RAM_ExtData_Segment_ID]
+    push [word ptr ds:RAM_ExtData_Segment_ID]
     pop ds
 ;;    ; Set ES to BIOS RAM segment (0040)
 ;;    mov ax, Bios_RAM_Segment
@@ -355,7 +355,9 @@ Int15h_C2_Exit:
 ; bh: 0 = disable, 1 = enable
 ; cf: 0 = no error, 1 = error
 Int15h_C2_EnableDisableMouse:
-    mov al, Int15h_C2_BP_Command
+;;    mov al, Int15h_C2_BP_Command
+    ;; bh is untouched at this point, I think
+    mov al, bh
     test al, 0FEh
     jnz short Int15h_C2_InvalidFunctionError
     test byte ptr ds:Mouse_PacketSizeFlags, Mouse_DriverFarCallFlag
@@ -437,7 +439,9 @@ Int15h_C2_ResetMouse_GetID:
 ; cf: 0 = no error, 1 = error
 Int15h_C2_SetSamplingRate:
     ; Check if input is valid
-    cmp Int15h_C2_BP_Command, 06
+    ;; bh is untouched at this point, I think
+;;    cmp Int15h_C2_BP_Command, 06
+    cmp bh, 6
     ja short Int15h_C2_InvalidInputError
     ; Input is valid, send command
     mov al, Cmd_SetSamplingRate
@@ -452,11 +456,20 @@ Int15h_C2_SetSamplingRate:
     ; Response error? get out
     jnz short Int15h_C2_Exit
     ; Get report rate based on index value
-    lea si, Int15h_C2_SampleRateTable
-    xor ah, ah
-    mov al, Int15h_C2_BP_Command
+    ;; lea si, cs:Int15h_C2_SampleRateTable
+    mov si, offset Int15h_C2_SampleRateTable
+;;    xor ah, ah
+;;    mov al, Int15h_C2_BP_Command
+;;  I think bh is still untouched at this moment
+
+    ;; Sorry.... too hacky :)
+    .386
+    movzx ax, bh
+    .286
+
     add si, ax
-    lodsb
+    lods byte ptr cs:[si]
+
 ;;    ; Send the new rate to the mouse
 ;;    call Out_8042_Aux
 ;;    ; Sending OK? Continue
@@ -486,9 +499,11 @@ Int15h_C2_SampleRateTable:
 ; bh on stack frame = Resolution value
 ; cf: 0 = no error, 1 = error
 Int15h_C2_SetResolution:
-    cmp Int15h_C2_BP_Command, 3
-    jbe short Int15h_C2_SetResolution_ValidInput
-    jmp Int15h_C2_InvalidInputError  ; invalid input
+;;    cmp Int15h_C2_BP_Command, 3
+    cmp bh, 3
+;;    jbe short Int15h_C2_SetResolution_ValidInput
+;;    jmp Int15h_C2_InvalidInputError  ; invalid input
+    ja Int15h_C2_InvalidInputError
 Int15h_C2_SetResolution_ValidInput:
     ; Send Command
     mov al, Cmd_SetResolution
@@ -508,7 +523,10 @@ Int15h_C2_SetResolution_CmdSendOK:
     jmp Int15h_C2_Exit
 Int15h_C2_SetResolution_CmdAckOK:
     ; Send actual parameter
-    mov al, Int15h_C2_BP_Command
+;;    mov al, Int15h_C2_BP_Command
+;;  I think bh is still untouched at this moment
+    mov al, bh
+
 ;;    call Out_8042_Aux
 ;;    ; OK? Continue
 ;;    jz short Int15h_C2_SetResolution_ParamSendOK
@@ -558,22 +576,27 @@ Int15h_C2_ReadDeviceType_ReadFailed:
 ; cf: 0 = no error, 1 = error
 Int15h_C2_MouseInit:
     ; Check supplied packet size
-    or Int15h_C2_BP_Command, 0
-    jz short Int15h_C2_MouseInit_InvalidInput
-    cmp Int15h_C2_BP_Command, 8
-    ; size <= 8? -> valid
-    jbe short Int15h_C2_MouseInit_Valid
-    ; Invalid: fallthrough
-Int15h_C2_MouseInit_InvalidInput:
-    ; Invalid input -> error
-    jmp Int15h_C2_InvalidInputError
+;;    or Int15h_C2_BP_Command, 0
+;;    jz short Int15h_C2_MouseInit_InvalidInput
+;;    cmp Int15h_C2_BP_Command, 8
+;;    ; size <= 8? -> valid
+;;    jbe short Int15h_C2_MouseInit_Valid
+;;    ; Invalid: fallthrough
+;;Int15h_C2_MouseInit_InvalidInput:
+;;    ; Invalid input -> error
+;;    jmp Int15h_C2_InvalidInputError
+    dec bh  ;; so a zero which is invalid would become 0FFh, thus the unsigned comparison catches all
+    cmp bh, 7
+    ja Int15h_C2_InvalidInputError
 
 Int15h_C2_MouseInit_Valid:
     ; Zero old packet size and set to new value
     and byte ptr ds:Mouse_PacketSizeFlags, 0f8h
-    mov al, Int15h_C2_BP_Command
-    dec al
-    or byte ptr ds:Mouse_PacketSizeFlags, al
+;;    mov al, Int15h_C2_BP_Command
+;;    dec al
+;;    or byte ptr ds:Mouse_PacketSizeFlags, al
+    ;; bh has our corrected value already
+    or byte ptr ds:Mouse_PacketSizeFlags, bh
 
     ; Try reset command 3 times
     mov bh, 3
@@ -581,10 +604,11 @@ Int15h_C2_MouseInit_TryLoop:
     ; Send command
     mov al, Cmd_Reset 
     call Out_8042_Aux
-    ; Send OK? Exit loop
-    jz short Int15h_C2_MouseInit_SendOK
-    ; Send failed -> Error
-    jmp short Int15h_C2_MouseInit_Error
+;;    ; Send OK? Exit loop
+;;    jz short Int15h_C2_MouseInit_SendOK
+;;    ; Send failed -> Error
+;;    jmp short Int15h_C2_MouseInit_Error
+    jnz short Int15h_C2_MouseInit_Error
 
 Int15h_C2_MouseInit_SendOK:
     ; Wait for ack, set status
@@ -846,7 +870,9 @@ ReadAuxData_NoReturnOnError:
     ; Read OK, return like normal
 ReadAuxData_ErrorCheck:
     jnz short ReadAuxData_ReturnInstruction
-    add sp, 2
+;;    add sp, 2
+    inc sp
+    inc sp
     jmp Int15h_C2_InterfaceError
 
 ; This one does NOT return on error, instead it pops the return address and moves DIRECTLY
