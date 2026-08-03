@@ -701,10 +701,12 @@ Int15h_C2_ExtendedCommand_GetStatus:
     ;; [o866] we can assume that if this call returns, it was successful.
     call Out_8042_Aux_NoReturnOnError
 Int15h_C2_ExtendedCommand_GetStatus_SendOK:
-    call Int15h_C2_WaitAck  ; wait response and set status
-;;    jz short Int15h_C2_ExtendedCommand_GetStatus_AckOK
-;;    jmp Int15h_C2_Exit
-    jnz Int15h_C2_Exit
+;;    call Int15h_C2_WaitAck  ; wait response and set status
+;;;;    jz short Int15h_C2_ExtendedCommand_GetStatus_AckOK
+;;;;    jmp Int15h_C2_Exit
+;;    jnz Int15h_C2_Exit
+    ;; [o866] we can assume that if this call returns, it was successful.
+    call Int15h_C2_WaitAck_NoReturnOnError
 Int15h_C2_ExtendedCommand_GetStatus_AckOK:
     ; Read byte 1, get out on error
 ;; Original AWARD
