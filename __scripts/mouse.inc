@@ -312,7 +312,8 @@ Int15h_C2_Handler:
 ;;    jz Int15h_C2_InterfaceError
     ; get entry in subfunction address table and jump to it
     xor ah, ah
-    mov al, Int15h_C2_BP_SubFunction
+;;    mov al, Int15h_C2_BP_SubFunction
+;;  ^ al is still valid at this point
     shl ax, 1
     mov si, offset Int15h_C2_SubFunctionTable
     add si, ax
