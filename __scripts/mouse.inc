@@ -56,12 +56,12 @@ Int15h_C2_BP_bl             EQU byte ptr [bp+0eh] ; bl
 Int15h_C2_BP_cl             EQU byte ptr [bp+0ch] ; cl
 Int15h_C2_BP_dl             EQU byte ptr [bp+0ah] ; dl
 
+
 SEG_15 SEGMENT USE16 PARA PUBLIC 'CODE'
 
     org 0
 
 IRQ12_New:
-
     push ax
     push bx
     push cx
@@ -76,7 +76,6 @@ IRQ12_New:
 
     mov bx, Bios_RAM_Segment
     mov ds, bx
-;    assume ds:Bios_RAM_Segment
 
     mov bx, ds:RAM_ExtData_Segment_ID
     mov ds, bx
@@ -200,6 +199,7 @@ Mouse_CheckDataPacket_End:
 
 Int15h_MouseFunction:
 ; [o866] I think this may be an archaic leftover and we can just assume this
+; so get rid of it
 IF 0
     ; this checks for "wait for external event supported"
     ; is this really necessary? could save some bytes
@@ -239,14 +239,20 @@ ENDIF
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Int15h Function C1 Handler - Get Extended Data Segment
 Int15h_C1_Handler:
-    push ax
-    mov ax, 40h
-    mov es, ax
-    assume es:nothing
-    mov ax, es:RAM_ExtData_Segment_ID
-    mov es, ax
-    assume es:nothing
-    pop ax
+; [o866] size opt
+;    push ax
+;    mov ax, 40h
+;    mov es, ax
+;    assume es:nothing
+;    mov ax, es:RAM_ExtData_Segment_ID
+;    mov es, ax
+;    assume es:nothing
+;    pop ax
+;    iret
+    push 40h
+    pop es
+    push [word ptr es:RAM_ExtData_Segment_ID]
+    pop es
     iret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
