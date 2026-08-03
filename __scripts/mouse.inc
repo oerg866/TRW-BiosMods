@@ -368,6 +368,9 @@ Int15h_C2_EnableDisableMouse:
 ;;    jnz short Int15h_C2_InterfaceError
     ;; [o866] we can assume that if this call returns, it was successful.
     call Out_8042_Aux_NoReturnOnError
+
+;; HACKY - Wait Ack and exit jump point
+Int15h_C2_WaitAckAndExit:
     call Int15h_C2_WaitAck
     jmp short Int15h_C2_Exit
 
@@ -479,10 +482,12 @@ Int15h_C2_SetSamplingRate:
     ;; [o866] we can assume that if this call returns, it was successful.
     call Out_8042_Aux_NoReturnOnError
 Int15h_C2_SetSamplingRate_SendOK:
-    ; wait for the response and set result flags accordingly
-    call Int15h_C2_WaitAck
-    ; WaitAck sets the appropriate error fields, so no need to handle them here
-    jmp Int15h_C2_Exit
+;;    ; wait for the response and set result flags accordingly
+;;    call Int15h_C2_WaitAck
+;;    ; WaitAck sets the appropriate error fields, so no need to handle them here
+;;    jmp Int15h_C2_Exit
+    jmp Int15h_C2_WaitAckAndExit
+
 
 ; Sample Rate Table (Reports per second)
 Int15h_C2_SampleRateTable:
@@ -517,10 +522,11 @@ Int15h_C2_SetResolution_ValidInput:
 Int15h_C2_SetResolution_CmdSendOK:
     ; Wait for CMD's Ack
     call Int15h_C2_WaitAck
-    ; OK? Continue
-    jz short Int15h_C2_SetResolution_CmdAckOK
-    ; Ack failed, get out
-    jmp Int15h_C2_Exit
+    jnz Int15h_C2_Exit
+;;    ; OK? Continue
+;;    jz short Int15h_C2_SetResolution_CmdAckOK
+;;    ; Ack failed, get out
+;;    jmp Int15h_C2_Exit
 Int15h_C2_SetResolution_CmdAckOK:
     ; Send actual parameter
 ;;    mov al, Int15h_C2_BP_Command
@@ -535,10 +541,11 @@ Int15h_C2_SetResolution_CmdAckOK:
     ;; [o866] we can assume that if this call returns, it was successful.
     call Out_8042_Aux_NoReturnOnError
 Int15h_C2_SetResolution_ParamSendOK:
-    ; wait for the response and set result flags accordingly
-    call Int15h_C2_WaitAck
-    ; WaitAck sets the appropriate error fields, so no need to handle them here
-    jmp Int15h_C2_Exit
+ ;;   ; wait for the response and set result flags accordingly
+ ;;   call Int15h_C2_WaitAck
+ ;;   ; WaitAck sets the appropriate error fields, so no need to handle them here
+ ;;   jmp Int15h_C2_Exit
+    jmp Int15h_C2_WaitAckAndExit
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Int15h C2 SubFunction 4: Read Aux Device Type
@@ -566,9 +573,9 @@ Int15h_C2_ReadDeviceType_AckOK:
     ; Read OK, set result & get out
     mov Int15h_C2_BP_bh, al
     jmp Int15h_C2_Success
-Int15h_C2_ReadDeviceType_ReadFailed:
-    ; Read failed = I/F error
-    jmp Int15h_C2_InterfaceError
+;;Int15h_C2_ReadDeviceType_ReadFailed:
+;;    ; Read failed = I/F error
+;;    jmp Int15h_C2_InterfaceError
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Int15h C2 SubFunction 5: Mouse Initialization
@@ -622,7 +629,8 @@ Int15h_C2_MouseInit_SendOK:
     ; Try to read second byte from aux device
     call ReadAuxData
     ; Read OK? -> Finished
-    jnz short Int15h_C2_MouseInit_Success
+;;    jnz short Int15h_C2_MouseInit_Success
+    jnz Int15h_C2_Success
     ; Fallthrough on error
 Int15h_C2_MouseInit_Error:
     ; On error -> loop & retry
@@ -631,9 +639,9 @@ Int15h_C2_MouseInit_Error:
     ; Failed after 3 loops -> Error
     jmp Int15h_C2_InterfaceError
 
-Int15h_C2_MouseInit_Success:
-    ; Everything OK!
-    jmp Int15h_C2_Success
+;;Int15h_C2_MouseInit_Success:
+;;    ; Everything OK!
+;;    jmp Int15h_C2_Success
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Int15h C2 SubFunction 6: Extended Commands
@@ -722,10 +730,11 @@ Int15h_C2_ExtendedCommand_Scale21_Execute:
     ;; [o866] we can assume that if this call returns, it was successful.
     call Out_8042_Aux_NoReturnOnError
 Int15h_C2_ExtendedCommand_Scale21_SendOK:
-    ; Wait for ack
-    call Int15h_C2_WaitAck
-    ; Exit C2 with WaitAck's result
-    jmp Int15h_C2_Exit
+;;    ; Wait for ack
+;;    call Int15h_C2_WaitAck
+;;    ; Exit C2 with WaitAck's result
+;;    jmp Int15h_C2_Exit
+    jmp Int15h_C2_WaitAckAndExit
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Int15h C2 SubFunction 7: Set Device Driver Far Call address
@@ -739,6 +748,8 @@ Int15h_C2_SetDriverFarCall:
     ; This routine can't fail but it really ought to on NULL or something...
     jmp Int15h_C2_Success
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Int15h C2 Sub function table, 16 bytes
 Int15h_C2_SubFunctionTable:
     dw offset Int15h_C2_EnableDisableMouse
     dw offset Int15h_C2_ResetMouse
@@ -786,7 +797,7 @@ EnableAOBFIrq:
 ;;EnableAOBFIrq_Exit:
 ;;    retn
     ;; [o866] size opt :)
-    jmp short DisableAOBFIrq_Execute;
+    jmp short DisableAOBFIrq_Execute
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Wait for AUX Command Response
