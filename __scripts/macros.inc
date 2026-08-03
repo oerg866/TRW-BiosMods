@@ -120,6 +120,21 @@ ResetID_TO      dw ?
 CPU_Support_Entry_486 ends
 
 
+; A conditional NEAR JUMP, 386+
+
+_JNZ    macro WHERE
+    .386
+    jnz WHERE
+    .286
+    endm
+
+_JA     macro WHERE
+    .386
+    ja WHERE
+    .286
+    endm
+
+
 ; Misc Constants
 KBC_DataPort            EQU 60h ; Keyboard controller data port
 Bios_RAM_Segment        EQU 40h ; BIOS internal RAM segment

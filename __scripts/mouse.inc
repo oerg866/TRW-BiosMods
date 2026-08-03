@@ -545,7 +545,7 @@ Int15h_C2_SetResolution:
     cmp bh, 3
 ;;    jbe short Int15h_C2_SetResolution_ValidInput
 ;;    jmp Int15h_C2_InvalidInputError  ; invalid input
-    ja Int15h_C2_InvalidInputError
+    _JA Int15h_C2_InvalidInputError
 Int15h_C2_SetResolution_ValidInput:
     ; Send Command
     mov al, Cmd_SetResolution
@@ -639,7 +639,7 @@ Int15h_C2_MouseInit:
 ;;    jmp Int15h_C2_InvalidInputError
     dec bh  ;; so a zero which is invalid would become 0FFh, thus the unsigned comparison catches all
     cmp bh, 7
-    ja Int15h_C2_InvalidInputError
+    _JA Int15h_C2_InvalidInputError
 
 Int15h_C2_MouseInit_Valid:
     ; Zero old packet size and set to new value
@@ -678,7 +678,8 @@ Int15h_C2_MouseInit_SendOK:
     call ReadAuxData
     ; Read OK? -> Finished
 ;;    jnz short Int15h_C2_MouseInit_Success
-    jnz Int15h_C2_Success
+    
+    _JNZ Int15h_C2_Success
     ; Fallthrough on error
 Int15h_C2_MouseInit_Error:
     ; On error -> loop & retry
