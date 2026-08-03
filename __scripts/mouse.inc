@@ -555,11 +555,77 @@ Int15h_C2_MouseInit_Success:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Int15h C2 SubFunction 6: Extended Commands
 ; bl on stack frame = Extended Command
+;   -> 0 = return status, 1 = set scale to 1:1, 2 = set scale to 2:1
 ; cf: 0 = no error, 1 = error
 Int15h_C2_ExtendedCommand:
-;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;; TODO ;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;
+    mov al, Int15h_C2_BP_Command
+    or al,al
+    jz short Int15h_C2_ExtendedCommand_GetStatus
+    dec al
+    jz short Int15h_C2_ExtendedCommand_Scale11
+    dec al
+    jz Int15h_C2_ExtendedCommand_Scale21
+    jmp Int15h_C2_InvalidFunctionError  ; invalid subfunction
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Int15h C2 SubFunction 6, 0: Get status
+; The format of this is complex and I have no clue about it
+; but the result is put in BL, CL and DL on the stack frame
+Int15h_C2_ExtendedCommand_GetStatus:
+    ; Send status request command to aux device
+    mov al, Cmd_StatusRequest
+    call Out_8042_Aux
+    ; sent ok? continue
+    jz short Int15h_C2_ExtendedCommand_GetStatus_SendOK
+    ; sending failed, get out
+    jmp Int15h_C2_InterfaceError
+Int15h_C2_ExtendedCommand_GetStatus_SendOK:
+    call Int15h_C2_WaitAck  ; wait response and set status
+    jz short Int15h_C2_ExtendedCommand_GetStatus_AckOK
+    jmp Int15h_C2_Exit
+Int15h_C2_ExtendedCommand_GetStatus_AckOK:
+    ; Read byte 1, get out on error
+    call ReadAuxData 
+    jz short Int15h_C2_ExtendedCommand_GetStatus_Error
+    mov Int15h_C2_BP_bl, al
+    ; Read byte 2, get out on error
+    call ReadAuxData
+    jz short Int15h_C2_ExtendedCommand_GetStatus_Error
+    mov Int15h_C2_BP_cl, al
+    ; Read byte 3, get out on error
+    call ReadAuxData
+    jz short Int15h_C2_ExtendedCommand_GetStatus_Error
+    mov Int15h_C2_BP_dl, al
+    ; All read ok, get out
+    jmp Int15h_C2_Success
+
+Int15h_C2_ExtendedCommand_GetStatus_Error:
+    jmp Int15h_C2_InterfaceError
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Int15h C2 SubFunction 6, 1: Set scaling to 1:1
+Int15h_C2_ExtendedCommand_Scale11:
+    ; Send reset scaling command
+    mov al, Cmd_ResetScaling
+    ; To save space, use command 2's rest of the code path
+    jmp short Int15h_C2_ExtendedCommand_Scale21_Execute
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Int15h C2 SubFunction 6, 1: Set scaling to 2:1
+Int15h_C2_ExtendedCommand_Scale21:
+    ; Send set scaling command
+    mov al, Cmd_SetScaling
+Int15h_C2_ExtendedCommand_Scale21_Execute:
+    call Out_8042_Aux
+    ; Sent ok? continue
+    jz short Int15h_C2_ExtendedCommand_Scale21_SendOK
+    ; Sending failed, get out
+    jmp Int15h_C2_InterfaceError
+Int15h_C2_ExtendedCommand_Scale21_SendOK:
+    ; Wait for ack
+    call Int15h_C2_WaitAck
+    ; Exit C2 with WaitAck's result
+    jmp Int15h_C2_Exit
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Int15h C2 SubFunction 7: Set Device Driver Far Call address
