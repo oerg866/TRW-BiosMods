@@ -472,24 +472,28 @@ Int15h_C2_SetSamplingRate:
     ;; [o866] we can assume that if this call returns, it was successful.
     call Out_8042_Aux_NoReturnOnError
 
-    ; Wait for response
-    call Int15h_C2_WaitAck
-    ; Response error? get out
-    jnz short Int15h_C2_Exit
+;;    ; Wait for response
+;;    call Int15h_C2_WaitAck
+;;    ; Response error? get out
+;;    jnz short Int15h_C2_Exit
+    call Int15h_C2_WaitAck_NoReturnOnError
     ; Get report rate based on index value
     ;; lea si, cs:Int15h_C2_SampleRateTable
-    mov si, offset Int15h_C2_SampleRateTable
-;;    xor ah, ah
-;;    mov al, Int15h_C2_BP_Command
-;;  I think bh is still untouched at this moment
-
-    ;; Sorry.... too hacky :)
-    .386
-    movzx ax, bh
-    .286
-
-    add si, ax
-    lods byte ptr cs:[si]
+;;    mov si, offset Int15h_C2_SampleRateTable
+;;;;    xor ah, ah
+;;;;    mov al, Int15h_C2_BP_Command
+;;;;  I think bh is still untouched at this moment
+;;
+;;    ;; Sorry.... too hacky :)
+;;    .386
+;;    movzx ax, bh
+;;    .286
+;;
+;;    add si, ax
+;;    lods byte ptr cs:[si]
+    xor bl, bl
+    mov bl, bh
+    mov al, byte ptr cs:[bx+Int15h_C2_SampleRateTable]
 
 ;;    ; Send the new rate to the mouse
 ;;    call Out_8042_Aux
