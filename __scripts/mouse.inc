@@ -377,12 +377,12 @@ Int15h_C2_EnableDisableMouse:
 Int15h_C2_EnableDisableMouse_NotDisable:
 
 
+;; HACKY - SendByteWaitAckAndExit jump point
+Int15h_C2_SendByteWaitAckAndExit:
 ;;    call Out_8042_Aux
 ;;    jnz short Int15h_C2_InterfaceError
     ;; [o866] we can assume that if this call returns, it was successful.
     call Out_8042_Aux_NoReturnOnError
-
-
 
 ;; HACKY - Wait Ack and exit jump point
 Int15h_C2_WaitAckAndExit:
@@ -497,14 +497,16 @@ Int15h_C2_SetSamplingRate:
 ;;    jz short Int15h_C2_SetSamplingRate_SendOK
 ;;    ; Sending failed, get out
 ;;    jmp Int15h_C2_InterfaceError
-    ;; [o866] we can assume that if this call returns, it was successful.
-    call Out_8042_Aux_NoReturnOnError
-Int15h_C2_SetSamplingRate_SendOK:
-;;    ; wait for the response and set result flags accordingly
-;;    call Int15h_C2_WaitAck
-;;    ; WaitAck sets the appropriate error fields, so no need to handle them here
-;;    jmp Int15h_C2_Exit
-    jmp Int15h_C2_WaitAckAndExit
+;;    ;; [o866] we can assume that if this call returns, it was successful.
+;;    call Out_8042_Aux_NoReturnOnError
+;;Int15h_C2_SetSamplingRate_SendOK:
+;;;;    ; wait for the response and set result flags accordingly
+;;;;    call Int15h_C2_WaitAck
+;;;;    ; WaitAck sets the appropriate error fields, so no need to handle them here
+;;;;    jmp Int15h_C2_Exit
+;;    jmp Int15h_C2_WaitAckAndExit
+;;
+    jmp short Int15h_C2_SendByteWaitAckAndExit
 
 
 ; Sample Rate Table (Reports per second)
@@ -551,19 +553,21 @@ Int15h_C2_SetResolution_CmdAckOK:
 ;;  I think bh is still untouched at this moment
     mov al, bh
 
-;;    call Out_8042_Aux
-;;    ; OK? Continue
-;;    jz short Int15h_C2_SetResolution_ParamSendOK
-;;    ; Param send error
-;;    jmp Int15h_C2_InterfaceError
-    ;; [o866] we can assume that if this call returns, it was successful.
-    call Out_8042_Aux_NoReturnOnError
-Int15h_C2_SetResolution_ParamSendOK:
- ;;   ; wait for the response and set result flags accordingly
- ;;   call Int15h_C2_WaitAck
- ;;   ; WaitAck sets the appropriate error fields, so no need to handle them here
- ;;   jmp Int15h_C2_Exit
-    jmp Int15h_C2_WaitAckAndExit
+;;;;    call Out_8042_Aux
+;;;;    ; OK? Continue
+;;;;    jz short Int15h_C2_SetResolution_ParamSendOK
+;;;;    ; Param send error
+;;;;    jmp Int15h_C2_InterfaceError
+;;    ;; [o866] we can assume that if this call returns, it was successful.
+;;    call Out_8042_Aux_NoReturnOnError
+;;Int15h_C2_SetResolution_ParamSendOK:
+;; ;;   ; wait for the response and set result flags accordingly
+;; ;;   call Int15h_C2_WaitAck
+;; ;;   ; WaitAck sets the appropriate error fields, so no need to handle them here
+;; ;;   jmp Int15h_C2_Exit
+;;    jmp Int15h_C2_WaitAckAndExit
+    jmp short Int15h_C2_SendByteWaitAckAndExit
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Int15h C2 SubFunction 4: Read Aux Device Type
@@ -578,15 +582,18 @@ Int15h_C2_ReadDeviceType:
     ;; [o866] we can assume that if this call returns, it was successful.
     call Out_8042_Aux_NoReturnOnError
 Int15h_C2_ReadDeviceType_SendOK:
-    ; Wait for Ack
-    call Int15h_C2_WaitAck
-    ; Ack OK? Continue
-    jz short Int15h_C2_ReadDeviceType_AckOK
-    ; No Ack - Exit
-    jmp Int15h_C2_Exit
+;;    ; Wait for Ack
+;;    call Int15h_C2_WaitAck
+;;    ; Ack OK? Continue
+;;    jz short Int15h_C2_ReadDeviceType_AckOK
+;;    ; No Ack - Exit
+;;    jmp Int15h_C2_Exit
+    ;; [o866] we can assume that if this call returns, it was successful.
+    call Int15h_C2_WaitAck_NoReturnOnError
 Int15h_C2_ReadDeviceType_AckOK:
 ;;    call ReadAuxData
 ;;    jz short Int15h_C2_ReadDeviceType_ReadFailed
+    ;; [o866] we can assume that if this call returns, it was successful.
     call ReadAuxData_NoReturnOnError
     ; Read OK, set result & get out
     mov Int15h_C2_BP_bh, al
@@ -931,6 +938,7 @@ ReadAuxData_NoReturnOnError:
 ReadAuxData_ErrorCheck:
     jnz short ReadAuxData_ReturnInstruction
 ;;    add sp, 2
+ReadAuxData_Error:
     inc sp
     inc sp
     jmp Int15h_C2_InterfaceError
