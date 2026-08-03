@@ -957,7 +957,9 @@ Out_8042_Aux_NoReturnOnError_ErrorCheck:
 
 Int15h_C2_WaitAck_NoReturnOnError:
     call Int15h_C2_WaitAck
-    jmp short Out_8042_Aux_NoReturnOnError_ErrorCheck
+    jz short ReadAuxData_ReturnInstruction
+    pop si ; register can be trashed, save 1 byte :))
+    jmp Int15h_C2_Exit
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
