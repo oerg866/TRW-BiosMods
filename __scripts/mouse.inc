@@ -305,24 +305,32 @@ Int15h_C2_FunctionIsValid:
 
 ; Error handling
 Int15h_C2_Success:
-    mov Int15h_C2_BP_Error, Int15h_AH_Success
+;;    mov Int15h_C2_BP_Error, Int15h_AH_Success
+;;    mov al, Int15h_AH_Success ; actually ...
+    xor al, al
     and Int15h_C2_BP_Flags, 0fffeh 
     jmp short Int15h_C2_Exit
 Int15h_C2_InvalidFunctionError:
-    mov Int15h_C2_BP_Error, Int15h_AH_InvalidFunction
+;;    mov Int15h_C2_BP_Error, Int15h_AH_InvalidFunction
+    mov al, Int15h_AH_InvalidFunction
     jmp short Int15h_C2_ErrorExit
 Int15h_C2_InvalidInputError:
-    mov Int15h_C2_BP_Error, Int15h_AH_InvalidInput
+;;    mov Int15h_C2_BP_Error, Int15h_AH_InvalidInput
+    mov al, Int15h_AH_InvalidInput
     jmp short Int15h_C2_ErrorExit
 Int15h_C2_InterfaceError:
-    mov Int15h_C2_BP_Error, Int15h_AH_InterfaceError
+;;    mov Int15h_C2_BP_Error, Int15h_AH_InterfaceError
+    mov al, Int15h_AH_InterfaceError
     jmp short Int15h_C2_ErrorExit
 Int15h_C2_NoFarCallInstalledError:
-    mov Int15h_C2_BP_Error, Int15h_AH_NoFarCallInstalled
+;;    mov Int15h_C2_BP_Error, Int15h_AH_NoFarCallInstalled
+    mov al, Int15h_AH_NoFarCallInstalled
 Int15h_C2_ErrorExit:
     ; Set carry flag in stack frame
     or Int15h_C2_BP_Flags, 01h
 Int15h_C2_Exit:
+    ;; [o866] size opt, we expect error code in al here
+    mov Int15h_C2_BP_Error, al
     ; Re-Enable AOBF IRQ
     call EnableAOBFIrq
     ; Restore stack & exit
@@ -395,7 +403,7 @@ Int15h_C2_ResetMouse_TryLoop:
     ; !!!!!!!!!!!!!!!!!!!!!!!!
     ; Timeout occurred
     ; Set flags and exit
-    or Int15h_C2_BP_Flags, 0    ;; waitack already affects the flags... is this really necessary?
+;;    or Int15h_C2_BP_Flags, 0    ;; waitack already affects the flags... is this really necessary? 
     jmp short Int15h_C2_Exit
 
 Int15h_C2_ResetMouse_GetID:
@@ -742,6 +750,8 @@ EnableAOBFIrq_Exit:
 ; Wait for AUX Command Response
 ; cf: 0 = No error, 1 = error
 ; Error codes as usual
+;; [o866] size opt
+;; On errror, the error code is loaded into al for further processing by the C2 exit handler
 Int15h_C2_WaitAck:
     push cx
     xor cx, cx
@@ -767,11 +777,13 @@ Int15h_C2_WaitAck_GetAck:
     cmp al, KBC_Aux_Code_Resend
     jne short Int15h_C2_WaitAck_GenericError
     ; Resend code was returned
-    mov Int15h_C2_BP_Error, Int15h_AH_Resend
+;;    mov Int15h_C2_BP_Error, Int15h_AH_Resend
+    mov al, Int15h_AH_Resend
     jmp short Int15h_C2_WaitAck_Error
 
 Int15h_C2_WaitAck_GenericError:
-    mov Int15h_C2_BP_Error, Int15h_AH_InterfaceError
+;;    mov Int15h_C2_BP_Error, Int15h_AH_InterfaceError
+    mov al, Int15h_AH_InterfaceError
     ; fallthrough
 Int15h_C2_WaitAck_Error:
     ; Error happened, clear packet size in 27h byte
@@ -782,13 +794,20 @@ Int15h_C2_WaitAck_Error:
 
 Int15h_C2_WaitAck_Success:
     ; Clear error code & Carry flag on stack frame
-    mov Int15h_C2_BP_Error, 00
+;;    mov Int15h_C2_BP_Error, 00
+    mov al, 0
     and Int15h_C2_BP_Flags, 0fffeh
+
+;; [o866] thoughts
+;; this isn't really necessary, as we never take a decision based on *success*
+;; all Waitack = success conditions result in us taking the success code path which sets all this garbage for us
+;; CORRECTION: No actually at one point we call waitack and jump to regular exit, not succes... Bleh. 
 
 Int15h_C2_WaitAck_Exit:
     pop cx
     ; Set ZF according to result
-    or Int15h_C2_BP_Error, 0
+;;    or Int15h_C2_BP_Error, 0
+    or al, 0
     ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
