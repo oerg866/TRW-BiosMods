@@ -246,7 +246,7 @@ Int15h_C1_Handler:
 ;    assume es:nothing
 ;    pop ax
 ;    iret
-    push 40h
+    push Bios_RAM_Segment
     pop es
     push [word ptr es:RAM_ExtData_Segment_ID]
     pop es
@@ -277,17 +277,24 @@ Int15h_C2_FunctionIsValid:
     push bp   ; [bp+00]
     mov bp, sp
 
-    ; Set ES to BIOS RAM segment (0040)
-    mov ax, Bios_RAM_Segment
-    mov es, ax
-    ; Set DS to XBDA Segment (get from 40:0E)
-    mov ax, es:RAM_ExtData_Segment_ID
-    mov ds, ax
+    ; [o866] size opt
     ; Disable Aux output buffer full (AOBF) interrupt
     call DisableAOBFIrq
+    push Bios_RAM_Segment
+    pop ds
+    push [word ptr es:RAM_ExtData_Segment_ID]
+    pop ds
+;;    ; Set ES to BIOS RAM segment (0040)
+;;    mov ax, Bios_RAM_Segment
+;;    mov es, ax
+;;    ; Set DS to XBDA Segment (get from 40:0E)
+;;    mov ax, es:RAM_ExtData_Segment_ID
+;;    mov ds, ax
+
+;; [o866] size opt
     ; Check mouse flag again (we already did this, WTF Award)
-    test byte ptr es:RAM_Bios_Hardware, 4
-    jz Int15h_C2_InterfaceError
+;;    test byte ptr es:RAM_Bios_Hardware, 4
+;;    jz Int15h_C2_InterfaceError
     ; get entry in subfunction address table and jump to it
     xor ah, ah
     mov al, Int15h_C2_BP_SubFunction
