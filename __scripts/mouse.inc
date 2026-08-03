@@ -357,22 +357,38 @@ Int15h_C2_Exit:
 Int15h_C2_EnableDisableMouse:
 ;;    mov al, Int15h_C2_BP_Command
     ;; bh is untouched at this point, I think
-    mov al, bh
-    test al, 0FEh
-    jnz short Int15h_C2_InvalidFunctionError
+;;    mov al, bh
+;;    test al, 0FEh
+;;    jnz short Int15h_C2_InvalidFunctionError
+;;    test byte ptr ds:Mouse_PacketSizeFlags, Mouse_DriverFarCallFlag
+;;    jz short Int15h_C2_NoFarCallInstalledError
+;;    xor al, 1
+;;    add al, Cmd_EnableData
+
+;; Bit of a hacky shortcut here. We'll just accept any nonzero value as 1.
     test byte ptr ds:Mouse_PacketSizeFlags, Mouse_DriverFarCallFlag
     jz short Int15h_C2_NoFarCallInstalledError
-    xor al, 1
-    add al, 0F4h
+    ;; AL F4h / BH 1 = enable
+    mov al, Cmd_EnableData
+    or bh, bh
+    ;; BH 1 = enable --> skip setting AL to disable command
+    jz short Int15h_C2_EnableDisableMouse_NotDisable
+    inc al
+Int15h_C2_EnableDisableMouse_NotDisable:
+
+
 ;;    call Out_8042_Aux
 ;;    jnz short Int15h_C2_InterfaceError
     ;; [o866] we can assume that if this call returns, it was successful.
     call Out_8042_Aux_NoReturnOnError
 
+
+
 ;; HACKY - Wait Ack and exit jump point
 Int15h_C2_WaitAckAndExit:
     call Int15h_C2_WaitAck
     jmp short Int15h_C2_Exit
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Int15h C2 SubFunction 1: Reset Pointing Device
@@ -395,10 +411,12 @@ Int15h_C2_ResetMouse:
 Int15h_C2_ResetMouse_TryLoop:
 ;;    push cx
     mov al, Cmd_Reset  ; reset mouse command
-    call Out_8042_Aux
+;;    call Out_8042_Aux
+    call Out_8042_Aux_NoReturnOnError
+
 ;;    pop cx
     ; Sending command failed - I/F error
-    jnz short Int15h_C2_InterfaceError
+;;    jnz short Int15h_C2_InterfaceError
 
     ; Wait for Ack
     call Int15h_C2_WaitAck
