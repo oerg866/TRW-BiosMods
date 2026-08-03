@@ -210,9 +210,6 @@ ENDIF
 
 ; ---------------------------------------------------------------------------
 Int15h_MouseFunction_Process:
-; [o866] size opt, we wont reach this code path if the mouse isnt present since this is checked earlier
-; so get rid of it
-IF 0
     ; Check if mouse present
     push es
     push Bios_RAM_Segment
@@ -225,8 +222,8 @@ IF 0
     jnz short Int15h_MousePresent
     ; Mouse not present, go back to int15 main path
     jmp Int15h_ContinueProcessing
+
 Int15h_MousePresent:
-ENDIF
 
 ; [o866] size opt
 ;    cmp ah, 0C1h
