@@ -450,6 +450,8 @@ Int15h_C2_ResetMouse_GetID:
 ;; [o866] we can assume that if this call returns, it was successful.
     call ReadAuxData_NoReturnOnError
     mov Int15h_C2_BP_bl, al
+;; Hacky jump point because this call + storage + success jump is duplicated below 
+Int15_C2_ReadAuxData_IntoBH_JumpOnSuccess:
     call ReadAuxData_NoReturnOnError
     mov Int15h_C2_BP_bh, al
     jmp Int15h_C2_Success
@@ -596,16 +598,18 @@ Int15h_C2_ReadDeviceType_SendOK:
     ;; [o866] we can assume that if this call returns, it was successful.
     call Int15h_C2_WaitAck_NoReturnOnError
 Int15h_C2_ReadDeviceType_AckOK:
-;;    call ReadAuxData
-;;    jz short Int15h_C2_ReadDeviceType_ReadFailed
-    ;; [o866] we can assume that if this call returns, it was successful.
-    call ReadAuxData_NoReturnOnError
-    ; Read OK, set result & get out
-    mov Int15h_C2_BP_bh, al
-    jmp Int15h_C2_Success
-;;Int15h_C2_ReadDeviceType_ReadFailed:
-;;    ; Read failed = I/F error
-;;    jmp Int15h_C2_InterfaceError
+;;;;    call ReadAuxData
+;;;;    jz short Int15h_C2_ReadDeviceType_ReadFailed
+;;    ;; [o866] we can assume that if this call returns, it was successful.
+;;    call ReadAuxData_NoReturnOnError
+;;    ; Read OK, set result & get out
+;;    mov Int15h_C2_BP_bh, al
+;;    jmp Int15h_C2_Success
+;;;;Int15h_C2_ReadDeviceType_ReadFailed:
+;;;;    ; Read failed = I/F error
+;;;;    jmp Int15h_C2_InterfaceError
+    jmp short Int15_C2_ReadAuxData_IntoBH_JumpOnSuccess
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Int15h C2 SubFunction 5: Mouse Initialization
