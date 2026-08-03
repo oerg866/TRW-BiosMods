@@ -349,8 +349,10 @@ Int15h_C2_EnableDisableMouse:
     jz short Int15h_C2_NoFarCallInstalledError
     xor al, 1
     add al, 0F4h
-    call Out_8042_Aux
-    jnz short Int15h_C2_InterfaceError
+;;    call Out_8042_Aux
+;;    jnz short Int15h_C2_InterfaceError
+    ;; [o866] we can assume that if this call returns, it was successful.
+    call Out_8042_Aux_NoReturnOnError
     call Int15h_C2_WaitAck
     jmp short Int15h_C2_Exit
 
@@ -361,12 +363,22 @@ Int15h_C2_ResetMouse:
     ; clear mouse packet buffer before sending
     and byte ptr ds:Mouse_PacketSizeFlags,0f8h
 
-    mov cl, 10   ; number of retry
+;; [o866] notes
+;; So they use CL for the loop counter...
+;; Going as far as push/popping cx when calling Out_8042_Aux
+;; but they are NOT using the loop instruction? then what's the point on insisting on cl
+;; two options:
+;; 1. make counter bl (out_8042_aux saves BX) and remove push/pop, saves 2 bytes
+;; 2. replace dec cl jz short with loop short, saves 2 bytes but ch needs to be cleared...
+;; so probably option 1 is better...
+
+;;    mov cl, 10   ; number of retry
+    mov bl, 10
 Int15h_C2_ResetMouse_TryLoop:
-    push cx
+;;    push cx
     mov al, Cmd_Reset  ; reset mouse command
     call Out_8042_Aux
-    pop cx
+;;    pop cx
     ; Sending command failed - I/F error
     jnz short Int15h_C2_InterfaceError
 
@@ -376,13 +388,14 @@ Int15h_C2_ResetMouse_TryLoop:
     jz short Int15h_C2_ResetMouse_GetID
 
     ; If not, loop
-    dec cl
+;;    dec cl
+    dec bl
     jnz short Int15h_C2_ResetMouse_TryLoop
 
     ; !!!!!!!!!!!!!!!!!!!!!!!!
     ; Timeout occurred
     ; Set flags and exit
-    or Int15h_C2_BP_Flags, 0
+    or Int15h_C2_BP_Flags, 0    ;; waitack already affects the flags... is this really necessary?
     jmp short Int15h_C2_Exit
 
 Int15h_C2_ResetMouse_GetID:
@@ -415,9 +428,12 @@ Int15h_C2_SetSamplingRate:
     ja short Int15h_C2_InvalidInputError
     ; Input is valid, send command
     mov al, Cmd_SetSamplingRate
-    call Out_8042_Aux
-    ; Sending failed, get out
-    jnz short Int15h_C2_InterfaceError
+;;    call Out_8042_Aux
+;;    ; Sending failed, get out
+;;    jnz short Int15h_C2_InterfaceError
+    ;; [o866] we can assume that if this call returns, it was successful.
+    call Out_8042_Aux_NoReturnOnError
+
     ; Wait for response
     call Int15h_C2_WaitAck
     ; Response error? get out
@@ -428,12 +444,14 @@ Int15h_C2_SetSamplingRate:
     mov al, Int15h_C2_BP_Command
     add si, ax
     lodsb
-    ; Send the new rate to the mouse
-    call Out_8042_Aux
-    ; Sending OK? Continue
-    jz short Int15h_C2_SetSamplingRate_SendOK
-    ; Sending failed, get out
-    jmp Int15h_C2_InterfaceError
+;;    ; Send the new rate to the mouse
+;;    call Out_8042_Aux
+;;    ; Sending OK? Continue
+;;    jz short Int15h_C2_SetSamplingRate_SendOK
+;;    ; Sending failed, get out
+;;    jmp Int15h_C2_InterfaceError
+    ;; [o866] we can assume that if this call returns, it was successful.
+    call Out_8042_Aux_NoReturnOnError
 Int15h_C2_SetSamplingRate_SendOK:
     ; wait for the response and set result flags accordingly
     call Int15h_C2_WaitAck
@@ -461,11 +479,13 @@ Int15h_C2_SetResolution:
 Int15h_C2_SetResolution_ValidInput:
     ; Send Command
     mov al, Cmd_SetResolution
-    call Out_8042_Aux
-    ; Send ok? Continue
-    jz short Int15h_C2_SetResolution_CmdSendOK
-    ; Send failed, get out
-    jmp Int15h_C2_InterfaceError
+;;    call Out_8042_Aux
+;;    ; Send ok? Continue
+;;    jz short Int15h_C2_SetResolution_CmdSendOK
+;;    ; Send failed, get out
+;;    jmp Int15h_C2_InterfaceError
+    ;; [o866] we can assume that if this call returns, it was successful.
+    call Out_8042_Aux_NoReturnOnError
 Int15h_C2_SetResolution_CmdSendOK:
     ; Wait for CMD's Ack
     call Int15h_C2_WaitAck
@@ -476,11 +496,13 @@ Int15h_C2_SetResolution_CmdSendOK:
 Int15h_C2_SetResolution_CmdAckOK:
     ; Send actual parameter
     mov al, Int15h_C2_BP_Command
-    call Out_8042_Aux
-    ; OK? Continue
-    jz short Int15h_C2_SetResolution_ParamSendOK
-    ; Param send error
-    jmp Int15h_C2_InterfaceError
+;;    call Out_8042_Aux
+;;    ; OK? Continue
+;;    jz short Int15h_C2_SetResolution_ParamSendOK
+;;    ; Param send error
+;;    jmp Int15h_C2_InterfaceError
+    ;; [o866] we can assume that if this call returns, it was successful.
+    call Out_8042_Aux_NoReturnOnError
 Int15h_C2_SetResolution_ParamSendOK:
     ; wait for the response and set result flags accordingly
     call Int15h_C2_WaitAck
@@ -492,11 +514,13 @@ Int15h_C2_SetResolution_ParamSendOK:
 ; cf: 0 = no error, 1 = error
 Int15h_C2_ReadDeviceType:
     mov al, Cmd_ReadDeviceType
-    call Out_8042_Aux
-    ; Send ok, continue
-    jz short Int15h_C2_ReadDeviceType_SendOK
-    ; Send failed, get out
-    jmp Int15h_C2_InterfaceError
+;;    call Out_8042_Aux
+;;    ; Send ok, continue
+;;    jz short Int15h_C2_ReadDeviceType_SendOK
+;;    ; Send failed, get out
+;;    jmp Int15h_C2_InterfaceError
+    ;; [o866] we can assume that if this call returns, it was successful.
+    call Out_8042_Aux_NoReturnOnError
 Int15h_C2_ReadDeviceType_SendOK:
     ; Wait for Ack
     call Int15h_C2_WaitAck
@@ -505,8 +529,9 @@ Int15h_C2_ReadDeviceType_SendOK:
     ; No Ack - Exit
     jmp Int15h_C2_Exit
 Int15h_C2_ReadDeviceType_AckOK:
-    call ReadAuxData
-    jz short Int15h_C2_ReadDeviceType_ReadFailed
+;;    call ReadAuxData
+;;    jz short Int15h_C2_ReadDeviceType_ReadFailed
+    call ReadAuxData_NoReturnOnError
     ; Read OK, set result & get out
     mov Int15h_C2_BP_bh, al
     jmp Int15h_C2_Success
@@ -595,33 +620,44 @@ Int15h_C2_ExtendedCommand:
 Int15h_C2_ExtendedCommand_GetStatus:
     ; Send status request command to aux device
     mov al, Cmd_StatusRequest
-    call Out_8042_Aux
-    ; sent ok? continue
-    jz short Int15h_C2_ExtendedCommand_GetStatus_SendOK
-    ; sending failed, get out
-    jmp Int15h_C2_InterfaceError
+;;    call Out_8042_Aux
+;;    ; sent ok? continue
+;;    jz short Int15h_C2_ExtendedCommand_GetStatus_SendOK
+;;    ; sending failed, get out
+;;    jmp Int15h_C2_InterfaceError
+    ;; [o866] we can assume that if this call returns, it was successful.
+    call Out_8042_Aux_NoReturnOnError
 Int15h_C2_ExtendedCommand_GetStatus_SendOK:
     call Int15h_C2_WaitAck  ; wait response and set status
     jz short Int15h_C2_ExtendedCommand_GetStatus_AckOK
     jmp Int15h_C2_Exit
 Int15h_C2_ExtendedCommand_GetStatus_AckOK:
     ; Read byte 1, get out on error
-    call ReadAuxData 
-    jz short Int15h_C2_ExtendedCommand_GetStatus_Error
+;;     call ReadAuxData 
+;;    jz short Int15h_C2_ExtendedCommand_GetStatus_Error
+;;    mov Int15h_C2_BP_bl, al
+;;    ; Read byte 2, get out on error
+;;    call ReadAuxData
+;;    jz short Int15h_C2_ExtendedCommand_GetStatus_Error
+;;    mov Int15h_C2_BP_cl, al
+;;    ; Read byte 3, get out on error
+;;    call ReadAuxData
+;;    jz short Int15h_C2_ExtendedCommand_GetStatus_Error
+;;    mov Int15h_C2_BP_dl, al
+
+    ;; [o866] we can assume that if this call returns, it was successful.
+    call ReadAuxData_NoReturnOnError
     mov Int15h_C2_BP_bl, al
-    ; Read byte 2, get out on error
-    call ReadAuxData
-    jz short Int15h_C2_ExtendedCommand_GetStatus_Error
+    call ReadAuxData_NoReturnOnError
     mov Int15h_C2_BP_cl, al
-    ; Read byte 3, get out on error
-    call ReadAuxData
-    jz short Int15h_C2_ExtendedCommand_GetStatus_Error
+    call ReadAuxData_NoReturnOnError
     mov Int15h_C2_BP_dl, al
     ; All read ok, get out
     jmp Int15h_C2_Success
 
-Int15h_C2_ExtendedCommand_GetStatus_Error:
-    jmp Int15h_C2_InterfaceError
+;; [o866] size opt
+;;Int15h_C2_ExtendedCommand_GetStatus_Error:
+;;    jmp Int15h_C2_InterfaceError
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Int15h C2 SubFunction 6, 1: Set scaling to 1:1
@@ -637,11 +673,13 @@ Int15h_C2_ExtendedCommand_Scale21:
     ; Send set scaling command
     mov al, Cmd_SetScaling
 Int15h_C2_ExtendedCommand_Scale21_Execute:
-    call Out_8042_Aux
-    ; Sent ok? continue
-    jz short Int15h_C2_ExtendedCommand_Scale21_SendOK
-    ; Sending failed, get out
-    jmp Int15h_C2_InterfaceError
+;;    call Out_8042_Aux
+;;    ; Sent ok? continue
+;;    jz short Int15h_C2_ExtendedCommand_Scale21_SendOK
+;;    ; Sending failed, get out
+;;    jmp Int15h_C2_InterfaceError
+    ;; [o866] we can assume that if this call returns, it was successful.
+    call Out_8042_Aux_NoReturnOnError
 Int15h_C2_ExtendedCommand_Scale21_SendOK:
     ; Wait for ack
     call Int15h_C2_WaitAck
@@ -782,9 +820,16 @@ ReadAuxData_ReturnInstruction:
 ReadAuxData_NoReturnOnError:
     call ReadAuxData
     ; Read OK, return like normal
+ReadAuxData_ErrorCheck:
     jnz short ReadAuxData_ReturnInstruction
     add sp, 2
     jmp Int15h_C2_InterfaceError
+
+; This one does NOT return on error, instead it pops the return address and moves DIRECTLY
+; to the C2 interface error!!
+Out_8042_Aux_NoReturnOnError:
+    call Out_8042_Aux
+    jmp short ReadAuxData_ErrorCheck
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
