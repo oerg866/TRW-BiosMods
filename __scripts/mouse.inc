@@ -766,13 +766,14 @@ Int15h_C2_ExtendedCommand_Scale21_Execute:
 ;;    ; Sending failed, get out
 ;;    jmp Int15h_C2_InterfaceError
     ;; [o866] we can assume that if this call returns, it was successful.
-    call Out_8042_Aux_NoReturnOnError
-Int15h_C2_ExtendedCommand_Scale21_SendOK:
-;;    ; Wait for ack
-;;    call Int15h_C2_WaitAck
-;;    ; Exit C2 with WaitAck's result
-;;    jmp Int15h_C2_Exit
-    jmp Int15h_C2_WaitAckAndExit
+;;    call Out_8042_Aux_NoReturnOnError
+;;Int15h_C2_ExtendedCommand_Scale21_SendOK:
+;;;;    ; Wait for ack
+;;;;    call Int15h_C2_WaitAck
+;;;;    ; Exit C2 with WaitAck's result
+;;;;    jmp Int15h_C2_Exit
+;;    jmp Int15h_C2_WaitAckAndExit
+    jmp Int15h_C2_SendByteWaitAckAndExit
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Int15h C2 SubFunction 7: Set Device Driver Far Call address
@@ -820,7 +821,7 @@ DisableAOBFIrq_Execute:
 ;;DisableAOBFIrq_Exit:
 ;;    retn
     clc
-    jz DisableAOBFIrq_SkipSuccess
+    jz short DisableAOBFIrq_SkipSuccess
     stc
 DisableAOBFIrq_SkipSuccess:
     retn
@@ -939,8 +940,9 @@ ReadAuxData_ErrorCheck:
     jnz short ReadAuxData_ReturnInstruction
 ;;    add sp, 2
 ReadAuxData_Error:
-    inc sp
-    inc sp
+;;    inc sp
+;;    inc sp
+    pop si ; register can be trashed, save 1 byte :))
     jmp Int15h_C2_InterfaceError
 
 ; This one does NOT return on error, instead it pops the return address and moves DIRECTLY
