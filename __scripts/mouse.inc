@@ -641,13 +641,16 @@ Int15h_C2_MouseInit_Success:
 ;   -> 0 = return status, 1 = set scale to 1:1, 2 = set scale to 2:1
 ; cf: 0 = no error, 1 = error
 Int15h_C2_ExtendedCommand:
-    mov al, Int15h_C2_BP_Command
-    or al,al
+;;    mov al, Int15h_C2_BP_Command
+;;    or al,al
+    or bh, bh
     jz short Int15h_C2_ExtendedCommand_GetStatus
-    dec al
+;;    dec al
+    dec bh
     jz short Int15h_C2_ExtendedCommand_Scale11
-    dec al
-    jz Int15h_C2_ExtendedCommand_Scale21
+;;    dec al
+    dec bh
+    jz short Int15h_C2_ExtendedCommand_Scale21
     jmp Int15h_C2_InvalidFunctionError  ; invalid subfunction
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -666,8 +669,9 @@ Int15h_C2_ExtendedCommand_GetStatus:
     call Out_8042_Aux_NoReturnOnError
 Int15h_C2_ExtendedCommand_GetStatus_SendOK:
     call Int15h_C2_WaitAck  ; wait response and set status
-    jz short Int15h_C2_ExtendedCommand_GetStatus_AckOK
-    jmp Int15h_C2_Exit
+;;    jz short Int15h_C2_ExtendedCommand_GetStatus_AckOK
+;;    jmp Int15h_C2_Exit
+    jnz Int15h_C2_Exit
 Int15h_C2_ExtendedCommand_GetStatus_AckOK:
     ; Read byte 1, get out on error
 ;;     call ReadAuxData 
@@ -749,31 +753,40 @@ Int15h_C2_SubFunctionTable:
 ; Disable AOBF IRQ In KBC
 ; cf: 0 = No error, 1 = KBC error 
 DisableAOBFIrq:
-    mov cl, KBC_WriteCMD
+;;    mov cl, KBC_WriteCMD
     mov al, 65h
+DisableAOBFIrq_Execute:
+    mov cl, KBC_WriteCMD
     call SendCommandToKBC
-    jnz short DisableAOBFIrq_Error
+;;    jnz short DisableAOBFIrq_Error
+;;    clc
+;;    jmp short DisableAOBFIrq_Exit
+;;DisableAOBFIrq_Error:
+;;    stc
+;;DisableAOBFIrq_Exit:
+;;    retn
     clc
-    jmp short DisableAOBFIrq_Exit
-DisableAOBFIrq_Error:
+    jz DisableAOBFIrq_SkipSuccess
     stc
-DisableAOBFIrq_Exit:
+DisableAOBFIrq_SkipSuccess:
     retn
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Enable AOBF IRQ In KBC
 ; cf: 0 = No error, 1 = KBC error 
 EnableAOBFIrq:
-    mov cl, KBC_WriteCMD
     mov al, 47h
-    call SendCommandToKBC
-    jnz short EnableAOBFIrq_Error
-    clc
-    jmp short EnableAOBFIrq_Exit
-EnableAOBFIrq_Error:
-    stc
-EnableAOBFIrq_Exit:
-    retn
+;;    mov cl, KBC_WriteCMD
+;;    call SendCommandToKBC
+;;    jnz short EnableAOBFIrq_Error
+;;    clc
+;;    jmp short EnableAOBFIrq_Exit
+;;EnableAOBFIrq_Error:
+;;    stc
+;;EnableAOBFIrq_Exit:
+;;    retn
+    ;; [o866] size opt :)
+    jmp short DisableAOBFIrq_Execute;
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Wait for AUX Command Response
