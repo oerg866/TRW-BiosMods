@@ -682,6 +682,7 @@ Int15h_C2_ExtendedCommand_GetStatus_SendOK:
     jnz Int15h_C2_Exit
 Int15h_C2_ExtendedCommand_GetStatus_AckOK:
     ; Read byte 1, get out on error
+;; Original AWARD
 ;;     call ReadAuxData 
 ;;    jz short Int15h_C2_ExtendedCommand_GetStatus_Error
 ;;    mov Int15h_C2_BP_bl, al
@@ -695,12 +696,24 @@ Int15h_C2_ExtendedCommand_GetStatus_AckOK:
 ;;    mov Int15h_C2_BP_dl, al
 
     ;; [o866] we can assume that if this call returns, it was successful.
+;;    call ReadAuxData_NoReturnOnError
+;;    mov Int15h_C2_BP_bl, al
+;;    call ReadAuxData_NoReturnOnError
+;;    mov Int15h_C2_BP_cl, al
+;;    call ReadAuxData_NoReturnOnError
+;;    mov Int15h_C2_BP_dl, al
+
+    ;; [o866] shit man, this is 13 bytes but kind of disgusting
+    mov si, 04h
+fdsfsd:
     call ReadAuxData_NoReturnOnError
-    mov Int15h_C2_BP_bl, al
-    call ReadAuxData_NoReturnOnError
-    mov Int15h_C2_BP_cl, al
-    call ReadAuxData_NoReturnOnError
-    mov Int15h_C2_BP_dl, al
+    mov byte ptr [bp + si + 0ah], al
+    dec si
+    dec si
+    jnz short fdsfsd
+
+
+    
     ; All read ok, get out
     jmp Int15h_C2_Success
 
