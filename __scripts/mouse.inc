@@ -199,16 +199,19 @@ Mouse_CheckDataPacket_End:
 ; Int15 Handler Code
 
 Int15h_MouseFunction:
+; [o866] I think this may be an archaic leftover and we can just assume this
+IF 0
     ; this checks for "wait for external event supported"
     ; is this really necessary? could save some bytes
     test cs:Sys_BiosConfigTable+5, 4
     jnz short Int15h_MouseFunction_Process
     jmp Int15h_ContinueProcessing
+ENDIF
+
 ; ---------------------------------------------------------------------------
 Int15h_MouseFunction_Process:
 ; [o866] size opt, we wont reach this code path if the mouse isnt present since this is checked earlier
 ; so get rid of it
-
 IF 0
     ; Check if mouse present
     push es
