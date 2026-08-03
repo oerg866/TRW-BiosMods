@@ -541,12 +541,13 @@ Int15h_C2_SetResolution_ValidInput:
     call Out_8042_Aux_NoReturnOnError
 Int15h_C2_SetResolution_CmdSendOK:
     ; Wait for CMD's Ack
-    call Int15h_C2_WaitAck
-    jnz Int15h_C2_Exit
-;;    ; OK? Continue
-;;    jz short Int15h_C2_SetResolution_CmdAckOK
-;;    ; Ack failed, get out
-;;    jmp Int15h_C2_Exit
+;;    call Int15h_C2_WaitAck
+;;    jnz Int15h_C2_Exit
+;;;;    ; OK? Continue
+;;;;    jz short Int15h_C2_SetResolution_CmdAckOK
+;;;;    ; Ack failed, get out
+;;;;    jmp Int15h_C2_Exit
+    call Int15h_C2_WaitAck_NoReturnOnError
 Int15h_C2_SetResolution_CmdAckOK:
     ; Send actual parameter
 ;;    mov al, Int15h_C2_BP_Command
@@ -734,7 +735,7 @@ Int15h_C2_ExtendedCommand_GetStatus_AckOK:
     mov si, 04h
 fdsfsd:
     call ReadAuxData_NoReturnOnError
-    mov byte ptr [bp + si + 0ah], al
+    mov byte ptr [bp + si + 0ah], al    ;; This stupid contraption writes to bp+0eh (bl), bp+0ch (cl), bp+0ah (dl)
     dec si
     dec si
     jnz short fdsfsd
