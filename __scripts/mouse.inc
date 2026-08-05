@@ -407,8 +407,12 @@ Int15h_C2_SendByteWaitAckAndExit:
 ; cf: 0 = no error, 1 = error
 Int15h_C2_ResetMouse:
     ; clear mouse packet buffer before sending
-    and byte ptr ds:Mouse_PacketSizeFlags,0f8h
-
+    xor bh, bh
+    mov dl, 1
+Int15h_C2_ResetMouse_Execute:
+    mov si, Mouse_PacketSizeFlags   ; save ONE byte :DDD
+    and byte ptr ds:[si], 0f8h
+    or byte ptr ds:[si], bh
 ;; [o866] notes
 ;; So they use CL for the loop counter...
 ;; Going as far as push/popping cx when calling Out_8042_Aux
@@ -461,11 +465,20 @@ Int15h_C2_ResetMouse_GetID:
 
 ;; [o866] we can assume that if this call returns, it was successful.
     call ReadAuxData_NoReturnOnError
-    mov Int15h_C2_BP_bl, al
+    mov bl, al
+;;    mov Int15h_C2_BP_bl, al
 ;; Hacky jump point because this call + storage + success jump is duplicated below 
-Int15_C2_ReadAuxData_IntoBH_JumpOnSuccess:
+Int15_C2_ResetMouse_ReadLastByteAndJumpOnSuccess:
     call ReadAuxData_NoReturnOnError
-    mov Int15h_C2_BP_bh, al
+    mov bh, al
+;;    mov Int15h_C2_BP_bh, al
+
+;; We can move BL and BH on the stack frame on demand
+;; DX = 0 means DONT do that
+    or dx, dx
+    jz short SkipWritingResultIntoBH
+    mov Int15h_C2_BP_Offset, bx
+SkipWritingResultIntoBH:
     jmp Int15h_C2_Success
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -623,7 +636,8 @@ Int15h_C2_ReadDeviceType_AckOK:
 ;;;;Int15h_C2_ReadDeviceType_ReadFailed:
 ;;;;    ; Read failed = I/F error
 ;;;;    jmp Int15h_C2_InterfaceError
-    jmp short Int15_C2_ReadAuxData_IntoBH_JumpOnSuccess
+    mov dl, 1 ;; Force writing result into BH
+    jmp short Int15_C2_ResetMouse_ReadLastByteAndJumpOnSuccess
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -644,60 +658,60 @@ Int15h_C2_MouseInit:
     dec bh  ;; so a zero which is invalid would become 0FFh, thus the unsigned comparison catches all
     cmp bh, 7
     _JA Int15h_C2_InvalidInputError
+    jmp Int15h_C2_ResetMouse_Execute
 
-Int15h_C2_MouseInit_Valid:
-    ; Zero old packet size and set to new value
-;;    and byte ptr ds:Mouse_PacketSizeFlags, 0f8h
-;;;;    mov al, Int15h_C2_BP_Command
-;;;;    dec al
-;;;;    or byte ptr ds:Mouse_PacketSizeFlags, al
-;;    ;; bh has our corrected value already
-;;    or byte ptr ds:Mouse_PacketSizeFlags, bh
-    mov si, Mouse_PacketSizeFlags   ; save ONE byte :DDD
-    and byte ptr ds:[si], 0f8h
-    or byte ptr ds:[si], bh
-
-IF 0
-;; Rewrite with slightly different instruction flow
-    
-
-ENDIF
-
-
-    ; Try reset command 3 times
-    mov bh, 3
-Int15h_C2_MouseInit_TryLoop:
-    ; Send command
-    mov al, Cmd_Reset 
-    call Out_8042_Aux
-;;    ; Send OK? Exit loop
-;;    jz short Int15h_C2_MouseInit_SendOK
-;;    ; Send failed -> Error
-;;    jmp short Int15h_C2_MouseInit_Error
-    jnz short Int15h_C2_MouseInit_Error
-
-Int15h_C2_MouseInit_SendOK:
-    ; Wait for ack, set status
-    call Int15h_C2_WaitAck
-    ; Send failed? -> Get out
-    jnz short Int15h_C2_MouseInit_Error
-    ; Try to read first byte from aux device
-    call ReadAuxData
-    ; Read failed? -> Get out
-    jz short Int15h_C2_MouseInit_Error
-    ; Try to read second byte from aux device
-    call ReadAuxData
-    ; Read OK? -> Finished
-;;    jnz short Int15h_C2_MouseInit_Success
-    
-    _JNZ Int15h_C2_Success
-    ; Fallthrough on error
-Int15h_C2_MouseInit_Error:
-    ; On error -> loop & retry
-    dec bh
-    jnz short Int15h_C2_MouseInit_TryLoop
-    ; Failed after 3 loops -> Error
-    jmp Int15h_C2_InterfaceError
+;;;;
+;;;;
+;;;;Int15h_C2_MouseInit_Valid:
+;;;;    ; Zero old packet size and set to new value
+;;;;;;    and byte ptr ds:Mouse_PacketSizeFlags, 0f8h
+;;;;;;;;    mov al, Int15h_C2_BP_Command
+;;;;;;;;    dec al
+;;;;;;;;    or byte ptr ds:Mouse_PacketSizeFlags, al
+;;;;;;    ;; bh has our corrected value already
+;;;;;;    or byte ptr ds:Mouse_PacketSizeFlags, bh
+;;;;    mov si, Mouse_PacketSizeFlags   ; save ONE byte :DDD
+;;;;    and byte ptr ds:[si], 0f8h
+;;;;    or byte ptr ds:[si], bh
+;;;;
+;;;;    ; Try reset command 3 times
+;;;;    mov bh, 3
+;;;;Int15h_C2_MouseInit_TryLoop:
+;;;;    ; Send command
+;;;;    mov al, Cmd_Reset 
+;;;;    call Out_8042_Aux
+;;;;;;    ; Send OK? Exit loop
+;;;;;;    jz short Int15h_C2_MouseInit_SendOK
+;;;;;;    ; Send failed -> Error
+;;;;;;    jmp short Int15h_C2_MouseInit_Error
+;;;;    jnz short Int15h_C2_MouseInit_Error
+;;;;
+;;;;Int15h_C2_MouseInit_SendOK:
+;;;;    ; Wait for ack, set status
+;;;;    call Int15h_C2_WaitAck
+;;;;    ; Send failed? -> Get out
+;;;;    jnz short Int15h_C2_MouseInit_Error
+;;;;    ; Try to read first byte from aux device
+;;;;    call ReadAuxData
+;;;;    ; Read failed? -> Get out
+;;;;    jz short Int15h_C2_MouseInit_Error
+;;;;    ; Try to read second byte from aux device
+;;;;    call ReadAuxData
+;;;;    ; Read OK? -> Finished
+;;;;;;    jnz short Int15h_C2_MouseInit_Success
+;;;;    
+;;;;    _JNZ Int15h_C2_Success
+;;;;    ; Fallthrough on error
+;;;;Int15h_C2_MouseInit_Error:
+;;;;    ; On error -> loop & retry
+;;;;    dec bh
+;;;;    jnz short Int15h_C2_MouseInit_TryLoop
+;;;;    ; Failed after 3 loops -> Error
+;;;;    jmp Int15h_C2_InterfaceError
+;;;;
+;;;; It's slightly different but we should be able
+;;;; The only real difference is that the ID is being stored in BL/BH
+;;;; which technically shouldn't break anything
 
 ;;Int15h_C2_MouseInit_Success:
 ;;    ; Everything OK!
@@ -892,20 +906,14 @@ EnableAOBFIrq:
 
 Int15_C2_TryAuxFull:
 ;; using dx here saves 1 byte
-;;    push cx
-    xor dx, dx
+    push cx
+    xor cx, cx
 Int15_C2_TryAuxFull_Loop:
-    ;; Aux_Full does not touch BX
-;;    push cx
+    push cx
     call Out_8042_Aux_Full
-;;    pop cx
-;;    loopz short Int15_C2_TryAuxFull_Loop
-;;    pop cx
-    jnz short Int15_C2_TryAuxFull_Exit
-    dec dx
-    jnz short Int15_C2_TryAuxFull_Loop
-    ;; Zero flag stays 0 in this instance on error so its ok
-Int15_C2_TryAuxFull_Exit:
+    pop cx
+    loopz short Int15_C2_TryAuxFull_Loop
+    pop cx
     retn
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
