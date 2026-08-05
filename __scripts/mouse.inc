@@ -504,8 +504,8 @@ Int15h_C2_SetSamplingRate:
 ;;
 ;;    add si, ax
 ;;    lods byte ptr cs:[si]
-    xor bl, bl
     mov bl, bh
+    xor bh, bh
     mov al, byte ptr cs:[bx+Int15h_C2_SampleRateTable]
 
 ;;    ; Send the new rate to the mouse
@@ -875,6 +875,19 @@ EnableAOBFIrq:
     ;; [o866] size opt :)
     jmp short DisableAOBFIrq_Execute
 
+Int15_C2_TryAuxFull:
+    push cx
+    xor cx, cx
+Int15_C2_TryAuxFull_Loop:
+    ;; Aux_Full does not touch BX
+    push cx
+    call Out_8042_Aux_Full
+    pop cx
+    loopz short Int15_C2_TryAuxFull_Loop
+    pop cx
+Int15_C2_TryAuxFull_Exit:
+    retn
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Wait for AUX Command Response
 ; cf: 0 = No error, 1 = error
@@ -882,23 +895,27 @@ EnableAOBFIrq:
 ;; [o866] size opt
 ;; On errror, the error code is loaded into al for further processing by the C2 exit handler
 Int15h_C2_WaitAck:
-    push cx
-    xor cx, cx
-Int15h_C2_WaitAck_Loop:
-    ; Wait for aux output buffer not to be full
-    push cx
-    call Out_8042_Aux_Full
-    pop cx
-;;    ; If buffer not full, we can continue
-;;    jnz short Int15h_C2_WaitAck_GetAck
-;;    ; Else keep looping
-;;    loop short Int15h_C2_WaitAck_Loop
-;;    ; !!!!!!!!!!!
-;;    ; Timeout error - use generic error code path for this
-;;    jmp short Int15h_C2_WaitAck_GenericError
+;;    push cx
+;;    xor cx, cx
+;;Int15h_C2_WaitAck_Loop:
+;;    ; Wait for aux output buffer not to be full
+;;    push cx
+;;    call Out_8042_Aux_Full
+;;    pop cx
+;;;;    ; If buffer not full, we can continue
+;;;;    jnz short Int15h_C2_WaitAck_GetAck
+;;;;    ; Else keep looping
+;;;;    loop short Int15h_C2_WaitAck_Loop
+;;;;    ; !!!!!!!!!!!
+;;;;    ; Timeout error - use generic error code path for this
+;;;;    jmp short Int15h_C2_WaitAck_GenericError
+;;
+;;    loopz short Int15h_C2_WaitAck_Loop
+;;    jz short Int15h_C2_WaitAck_GenericError
 
-    loopz short Int15h_C2_WaitAck_Loop
-    jz short Int15h_C2_WaitAck_GenericError
+;;    mov si, Int15h_C2_WaitAck_GenericError
+    call Int15_C2_TryAuxFull
+    jz short    Int15h_C2_WaitAck_GenericError
 
 Int15h_C2_WaitAck_GetAck:
     ; Check Ack Code
@@ -936,7 +953,7 @@ Int15h_C2_WaitAck_Success:
 ;; CORRECTION: No actually at one point we call waitack and jump to regular exit, not succes... Bleh. 
 
 Int15h_C2_WaitAck_Exit:
-    pop cx
+;;    pop cx
     ; Set ZF according to result
 ;;    or Int15h_C2_BP_Error, 0
     or al, 0
@@ -946,26 +963,29 @@ Int15h_C2_WaitAck_Exit:
 ; Read data from the mouse when the aux output buffer is full
 ; zf: 0 = data in AL, 1 = error or no data
 ReadAuxData:
-    push cx
-    xor cx, cx
-ReadAuxData_Loop:
-    push cx
-    call Out_8042_Aux_Full
-    pop cx
-    ; Is AOB full? If yes, read the byte, else keep looping
-
-;;     jnz short ReadAuxData_ReadData
-;;    loop short ReadAuxData_Loop
-;;    ; Timeout
-;;    jmp short ReadAuxData_Exit
-
-    loopz short ReadAuxData_Loop
+;;    push cx
+;;    xor cx, cx
+;;ReadAuxData_Loop:
+;;    push cx
+;;    call Out_8042_Aux_Full
+;;    pop cx
+;;    ; Is AOB full? If yes, read the byte, else keep looping
+;;
+;;;;     jnz short ReadAuxData_ReadData
+;;;;    loop short ReadAuxData_Loop
+;;;;    ; Timeout
+;;;;    jmp short ReadAuxData_Exit
+;;
+;;    loopz short ReadAuxData_Loop
+;;    jz short ReadAuxData_Exit
+;;
+    call Int15_C2_TryAuxFull
     jz short ReadAuxData_Exit
 
 ReadAuxData_ReadData:
     in al, KBC_DataPort
 ReadAuxData_Exit:
-    pop cx
+;;    pop cx
 ReadAuxData_ReturnInstruction:
     ret
 
