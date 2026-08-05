@@ -75,12 +75,14 @@ IRQ12_New:
     in al, KBC_DataPort
     sti
 
-    mov bx, Bios_RAM_Segment
-    mov ds, bx
-
-    mov bx, ds:RAM_ExtData_Segment_ID
-    mov ds, bx
+    call getXBDASegmentIntoDS
+;;    mov bx, Bios_RAM_Segment
+;;    mov ds, bx
+;;
+;;    mov bx, ds:RAM_ExtData_Segment_ID
+;;    mov ds, bx
     assume ds:nothing   ; <-- why?
+
     mov bl, ds:Mouse_CountIndex
     and byte ptr ds:Mouse_CountIndex, 0f8h  ; Clear count index
     xor bh, bh
@@ -198,6 +200,13 @@ Mouse_CheckDataPacket_Loop:
 Mouse_CheckDataPacket_End:
     retn
 
+GetXBDASegmentIntoDS:
+    push Bios_RAM_Segment
+    pop ds
+    push [word ptr ds:RAM_ExtData_Segment_ID]
+    pop ds
+    retn
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Int15 Handler Code
 
@@ -241,10 +250,7 @@ Int15h_MousePresent:
     call DisableAOBFIrq
 
     ; Data segment for the C2 handler is the XBDA
-    push Bios_RAM_Segment
-    pop ds
-    push [word ptr ds:RAM_ExtData_Segment_ID]
-    pop ds
+    call GetXBDASegmentIntoDS
 
     ; Since we moved AX into DX earlier, the function from AH ended up in DH...
     cmp dh, 0C1h
