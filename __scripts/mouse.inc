@@ -658,6 +658,7 @@ Int15h_C2_MouseInit:
     dec bh  ;; so a zero which is invalid would become 0FFh, thus the unsigned comparison catches all
     cmp bh, 7
     _JA Int15h_C2_InvalidInputError
+    xor dx, dx ;; Do not write the result
     jmp Int15h_C2_ResetMouse_Execute
 
 ;;;;
@@ -729,11 +730,20 @@ Int15h_C2_ExtendedCommand:
     jz short Int15h_C2_ExtendedCommand_GetStatus
 ;;    dec al
     dec bh
-    jz short Int15h_C2_ExtendedCommand_Scale11
+    mov al, Cmd_ResetScaling
+    jz short Int15h_C2_ExtendedCommand_Scale21_Execute
 ;;    dec al
+
+
+    inc ax
     dec bh
-    jz short Int15h_C2_ExtendedCommand_Scale21
-    jmp Int15h_C2_InvalidFunctionError  ; invalid subfunction
+;;    jz short Int15h_C2_ExtendedCommand_Scale21
+    _JNZ Int15h_C2_InvalidFunctionError
+
+Int15h_C2_ExtendedCommand_Scale21_Execute:
+    jmp Int15h_C2_SendByteWaitAckAndExit
+
+;;    jmp Int15h_C2_InvalidFunctionError  ; invalid subfunction
 
 ;; CRAZY idea... use the flags as a jump table??
 ;; ok sadly doesnt work as nicely as it does on 68, scrapping that idea
@@ -805,16 +815,16 @@ fdsfsd:
 ; Int15h C2 SubFunction 6, 1: Set scaling to 1:1
 Int15h_C2_ExtendedCommand_Scale11:
     ; Send reset scaling command
-    mov al, Cmd_ResetScaling
+;;    mov al, Cmd_ResetScaling
     ; To save space, use command 2's rest of the code path
-    jmp short Int15h_C2_ExtendedCommand_Scale21_Execute
+;;    jmp short Int15h_C2_ExtendedCommand_Scale21_Execute
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Int15h C2 SubFunction 6, 1: Set scaling to 2:1
 Int15h_C2_ExtendedCommand_Scale21:
     ; Send set scaling command
-    mov al, Cmd_SetScaling
-Int15h_C2_ExtendedCommand_Scale21_Execute:
+;;    mov al, Cmd_SetScaling
+;;Int15h_C2_ExtendedCommand_Scale21_Execute:
 ;;    call Out_8042_Aux
 ;;    ; Sent ok? continue
 ;;    jz short Int15h_C2_ExtendedCommand_Scale21_SendOK
@@ -828,7 +838,7 @@ Int15h_C2_ExtendedCommand_Scale21_Execute:
 ;;;;    ; Exit C2 with WaitAck's result
 ;;;;    jmp Int15h_C2_Exit
 ;;    jmp Int15h_C2_WaitAckAndExit
-    jmp Int15h_C2_SendByteWaitAckAndExit
+;;    jmp Int15h_C2_SendByteWaitAckAndExit
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Int15h C2 SubFunction 7: Set Device Driver Far Call address
