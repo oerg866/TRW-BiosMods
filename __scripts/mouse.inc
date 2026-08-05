@@ -182,15 +182,12 @@ Mouse_CheckDataPacket_Loop:
     loop Mouse_CheckDataPacket_Loop
 
     and byte ptr ds:Mouse_CountIndex, 0f8h
-;;    mov ax, ds
-;;    mov es, ax
     push ds
     pop es
     assume es:nothing
     cld
 
 ; Clear aux data buffer
-;;    lea di, ds:Mouse_AuxData
     mov di, offset Mouse_AuxData
     xor ax, ax
     stosw
@@ -199,21 +196,18 @@ Mouse_CheckDataPacket_Loop:
     stosw
 Mouse_CheckDataPacket_End:
     retn
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Int15 Handler Code
 
 Int15h_MouseFunction:
-; [o866] I think this may be an archaic leftover and we can just assume this
-; so get rid of it
-IF 0
-    ; this checks for "wait for external event supported"
-    ; is this really necessary? could save some bytes
-    test cs:Sys_BiosConfigTable+5, 4
-    jnz short Int15h_MouseFunction_Process
-    jmp Int15h_ContinueProcessing
-ENDIF
+;;; [o866] I think this may be an archaic leftover and we can just assume this
+;;; so get rid of it
+;;    ; this checks for "wait for external event supported" - whatever that is
+;;    test cs:Sys_BiosConfigTable+5, 4
+;;    jnz short Int15h_MouseFunction_Process
+;;    jmp Int15h_ContinueProcessing
 
-; ---------------------------------------------------------------------------
 Int15h_MouseFunction_Process:
     ; Check if mouse present
     push es
@@ -230,27 +224,14 @@ Int15h_MouseFunction_Process:
 
 Int15h_MousePresent:
 
-; [o866] size opt
-;    cmp ah, 0C1h
-;    jz Int15h_C1_Handler
-;    jmp Int15h_C2_Handler
     cmp ah, 0C2h
     jz short Int15h_C2_Handler
     ; fallthrough
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Int15h Function C1 Handler - Get Extended Data Segment
+; Outputs XBDA segment in ES and leaves the interrupt outright
 Int15h_C1_Handler:
-; [o866] size opt
-;    push ax
-;    mov ax, 40h
-;    mov es, ax
-;    assume es:nothing
-;    mov ax, es:RAM_ExtData_Segment_ID
-;    mov es, ax
-;    assume es:nothing
-;    pop ax
-;    iret
     push Bios_RAM_Segment
     pop es
     push [word ptr es:RAM_ExtData_Segment_ID]
@@ -368,20 +349,11 @@ Int15h_C2_Exit:
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Int15h C2 SubFunction 0: Enable/Disable mouse
-; bh: 0 = disable, 1 = enable
+;; DISREGARD THIS -> bh: 0 = disable, 1 = enable
+; bh nonzero = enable, 0 = disable
+; This is a deviation from original AWD bios but much smaller
 ; cf: 0 = no error, 1 = error
 Int15h_C2_EnableDisableMouse:
-;;    mov al, Int15h_C2_BP_Command
-    ;; bh is untouched at this point, I think
-;;    mov al, bh
-;;    test al, 0FEh
-;;    jnz short Int15h_C2_InvalidFunctionError
-;;    test byte ptr ds:Mouse_PacketSizeFlags, Mouse_DriverFarCallFlag
-;;    jz short Int15h_C2_NoFarCallInstalledError
-;;    xor al, 1
-;;    add al, Cmd_EnableData
-
-;; Bit of a hacky shortcut here. We'll just accept any nonzero value as 1.
     test byte ptr ds:Mouse_PacketSizeFlags, Mouse_DriverFarCallFlag
     jz short Int15h_C2_NoFarCallInstalledError
     ;; AL F4h / BH 1 = enable
@@ -389,94 +361,71 @@ Int15h_C2_EnableDisableMouse:
     or bh, bh
     ;; BH 1 = enable --> skip setting AL to disable command
     jz short Int15h_C2_EnableDisableMouse_NotDisable
-    inc al
+    inc al ; al is now "disable mouse" command
+    ; fallthrough
+
 Int15h_C2_EnableDisableMouse_NotDisable:
 
-
-;; HACKY - SendByteWaitAckAndExit jump point
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Code path  jump point for sending a byte out and waiting for ack
+;; and then taking C2 exit path
 Int15h_C2_SendByteWaitAckAndExit:
-;;    call Out_8042_Aux
-;;    jnz short Int15h_C2_InterfaceError
-    ;; [o866] we can assume that if this call returns, it was successful.
-;;    call Out_8042_Aux_NoReturnOnError
-;;
-;;;; HACKY - Wait Ack and exit jump point
-;;Int15h_C2_WaitAckAndExit:
-;;    call Int15h_C2_WaitAck
     call Out_8042_Aux_And_WaitAck_NoReturnOnError
     jmp short Int15h_C2_Exit
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Int15h C2 SubFunction 1: Reset Pointing Device
 ; cf: 0 = no error, 1 = error
 Int15h_C2_ResetMouse:
     ; clear mouse packet buffer before sending
-    xor bh, bh
+    xor bh, bh ; Reset mouse command resets packet size in OG funcition
     mov dl, 1
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Code path jump point for RESETTING THE MOUSE and SETTING THE PACKET SIZE
+; bh = Packet size
+; DX = 1 - store returned ID in stack frame's BX
+;      0 - don't store result in stack frame's BX
 Int15h_C2_ResetMouse_Execute:
-    mov si, Mouse_PacketSizeFlags   ; save ONE byte :DDD
+    ; Set packet size to given value
+    mov si, Mouse_PacketSizeFlags
     and byte ptr ds:[si], 0f8h
     or byte ptr ds:[si], bh
-;; [o866] notes
-;; So they use CL for the loop counter...
-;; Going as far as push/popping cx when calling Out_8042_Aux
-;; but they are NOT using the loop instruction? then what's the point on insisting on cl
-;; two options:
-;; 1. make counter bl (out_8042_aux saves BX) and remove push/pop, saves 2 bytes
-;; 2. replace dec cl jz short with loop short, saves 2 bytes but ch needs to be cleared...
-;; so probably option 1 is better...
 
-;;    mov cl, 10   ; number of retry
+    ; Number of (re)tries
     mov bl, 10
 Int15h_C2_ResetMouse_TryLoop:
-;;    push cx
-    mov al, Cmd_Reset  ; reset mouse command
+    ; Send "reset" command to the mouse
+    mov al, Cmd_Reset
     call Out_8042_Aux
-;;    call Out_8042_Aux_NoReturnOnError
 
-;;    pop cx
     ; Sending command failed - I/F error
     jnz short Int15h_C2_InterfaceError
 
     ; Wait for Ack
     call Int15h_C2_WaitAck
-    ; Ack received? Get out
+    ; Ack received? Success, leave the try-loop
     jz short Int15h_C2_ResetMouse_GetID
 
     ; If not, loop
-;;    dec cl
     dec bl
     jnz short Int15h_C2_ResetMouse_TryLoop
 
     ; !!!!!!!!!!!!!!!!!!!!!!!!
     ; Timeout occurred
-    ; Set flags and exit
-;;    or Int15h_C2_BP_Flags, 0    ;; waitack already affects the flags... is this really necessary? 
+    ; This can only come from WaitAck so the error code and flags are in place
+    ; and we move to C2 exit code path
     jmp short Int15h_C2_Exit
 
+    ; At this point we got an acknowledgement to our command
 Int15h_C2_ResetMouse_GetID:
-    ; Read Aux Buffer Data First byte
-;;    call ReadAuxData
-;;    ; Read failed? Get out
-;;    jz short Int15h_C2_InterfaceError
-;;    ; Read OK
-;;    mov Int15h_C2_BP_bl, al
-;;
-;;    ; Do this once more for 2nd byte
-;;    call ReadAuxData
-;;    jz short Int15h_C2_InterfaceError
-;;    mov Int15h_C2_BP_bh, al
-
-;; [o866] we can assume that if this call returns, it was successful.
     call ReadAuxData_NoReturnOnError
-    mov bl, al
-;;    mov Int15h_C2_BP_bl, al
+    mov bl, al  ; Store data into BX for later
+
 ;; Hacky jump point because this call + storage + success jump is duplicated below 
 Int15_C2_ResetMouse_ReadLastByteAndJumpOnSuccess:
     call ReadAuxData_NoReturnOnError
-    mov bh, al
-;;    mov Int15h_C2_BP_bh, al
+    mov bh, al ; Store data into BX for later
 
 ;; We can move BL and BH on the stack frame on demand
 ;; DX = 0 means DONT do that
@@ -492,119 +441,37 @@ SkipWritingResultIntoBH:
 ; cf: 0 = no error, 1 = error
 Int15h_C2_SetSamplingRate:
     ; Check if input is valid
-    ;; bh is untouched at this point, I think
-;;    cmp Int15h_C2_BP_Command, 06
+
     cmp bh, 6
-    ja short Int15h_C2_InvalidInputError
-    ; Input is valid, send command
+    _JA Int15h_C2_InvalidInputError
+
+    ; Send "Set report rate" command and wait for ack
     mov al, Cmd_SetSamplingRate
-;;    call Out_8042_Aux
-;;    ; Sending failed, get out
-;;    jnz short Int15h_C2_InterfaceError
-    ;; [o866] we can assume that if this call returns, it was successful.
     call Out_8042_Aux_And_WaitAck_NoReturnOnError
-;;    call Out_8042_Aux_NoReturnOnError
-;;
-;;;;    ; Wait for response
-;;;;    call Int15h_C2_WaitAck
-;;;;    ; Response error? get out
-;;;;    jnz short Int15h_C2_Exit
-;;    call Int15h_C2_WaitAck_NoReturnOnError
-    ; Get report rate based on index value
-    ;; lea si, cs:Int15h_C2_SampleRateTable
-;;    mov si, offset Int15h_C2_SampleRateTable
-;;;;    xor ah, ah
-;;;;    mov al, Int15h_C2_BP_Command
-;;;;  I think bh is still untouched at this moment
-;;
-;;    ;; Sorry.... too hacky :)
-;;    .386
-;;    movzx ax, bh
-;;    .286
-;;
-;;    add si, ax
-;;    lods byte ptr cs:[si]
+
+    ; Read report rate from table based on index
     mov bl, bh
     xor bh, bh
     mov al, byte ptr cs:[bx+Int15h_C2_SampleRateTable]
 
-;;    ; Send the new rate to the mouse
-;;    call Out_8042_Aux
-;;    ; Sending OK? Continue
-;;    jz short Int15h_C2_SetSamplingRate_SendOK
-;;    ; Sending failed, get out
-;;    jmp Int15h_C2_InterfaceError
-;;    ;; [o866] we can assume that if this call returns, it was successful.
-;;    call Out_8042_Aux_NoReturnOnError
-;;Int15h_C2_SetSamplingRate_SendOK:
-;;;;    ; wait for the response and set result flags accordingly
-;;;;    call Int15h_C2_WaitAck
-;;;;    ; WaitAck sets the appropriate error fields, so no need to handle them here
-;;;;    jmp Int15h_C2_Exit
-;;    jmp Int15h_C2_WaitAckAndExit
-;;
+    ; Send report rate to the mouse
     jmp short Int15h_C2_SendByteWaitAckAndExit
-
-
-; Sample Rate Table (Reports per second)
-Int15h_C2_SampleRateTable:
-    db 0ah  ; 00 = 10  reports/second
-    db 14h  ; 01 = 20  reports/second
-    db 28h  ; 02 = 40  reports/second
-    db 3ch  ; 03 = 60  reports/second
-    db 50h  ; 04 = 80  reports/second
-    db 64h  ; 05 = 100 reports/second
-    db 0c8h ; 06 = 200 reports/second
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Int15h C2 SubFunction 3: Set Resolution
-; bh on stack frame = Resolution value
+; bh on stack frame = Resolution value (0-3)
 ; cf: 0 = no error, 1 = error
 Int15h_C2_SetResolution:
-;;    cmp Int15h_C2_BP_Command, 3
+    ; Check parameter for validity
     cmp bh, 3
-;;    jbe short Int15h_C2_SetResolution_ValidInput
-;;    jmp Int15h_C2_InvalidInputError  ; invalid input
     _JA Int15h_C2_InvalidInputError
-Int15h_C2_SetResolution_ValidInput:
-    ; Send Command
-    mov al, Cmd_SetResolution
-;;    call Out_8042_Aux
-;;    ; Send ok? Continue
-;;    jz short Int15h_C2_SetResolution_CmdSendOK
-;;    ; Send failed, get out
-;;    jmp Int15h_C2_InterfaceError
-    ;; [o866] we can assume that if this call returns, it was successful.
-;;    call Out_8042_Aux_NoReturnOnError
-;;Int15h_C2_SetResolution_CmdSendOK:
-;;    ; Wait for CMD's Ack
-;;;;    call Int15h_C2_WaitAck
-;;;;    jnz Int15h_C2_Exit
-;;;;;;    ; OK? Continue
-;;;;;;    jz short Int15h_C2_SetResolution_CmdAckOK
-;;;;;;    ; Ack failed, get out
-;;;;;;    jmp Int15h_C2_Exit
-;;    call Int15h_C2_WaitAck_NoReturnOnError
-    call Out_8042_Aux_And_WaitAck_NoReturnOnError
-Int15h_C2_SetResolution_CmdAckOK:
-    ; Send actual parameter
-;;    mov al, Int15h_C2_BP_Command
-;;  I think bh is still untouched at this moment
-    mov al, bh
 
-;;;;    call Out_8042_Aux
-;;;;    ; OK? Continue
-;;;;    jz short Int15h_C2_SetResolution_ParamSendOK
-;;;;    ; Param send error
-;;;;    jmp Int15h_C2_InterfaceError
-;;    ;; [o866] we can assume that if this call returns, it was successful.
-;;    call Out_8042_Aux_NoReturnOnError
-;;Int15h_C2_SetResolution_ParamSendOK:
-;; ;;   ; wait for the response and set result flags accordingly
-;; ;;   call Int15h_C2_WaitAck
-;; ;;   ; WaitAck sets the appropriate error fields, so no need to handle them here
-;; ;;   jmp Int15h_C2_Exit
-;;    jmp Int15h_C2_WaitAckAndExit
+    ; Send "set resolution" command to the mouse and wait for ack
+    mov al, Cmd_SetResolution
+    call Out_8042_Aux_And_WaitAck_NoReturnOnError
+
+    ; Ack ok, send the resolution value
+    mov al, bh
     jmp short Int15h_C2_SendByteWaitAckAndExit
 
 
@@ -612,38 +479,13 @@ Int15h_C2_SetResolution_CmdAckOK:
 ; Int15h C2 SubFunction 4: Read Aux Device Type
 ; cf: 0 = no error, 1 = error
 Int15h_C2_ReadDeviceType:
+    ; Send "read type" command to the mouse and wait for ack
     mov al, Cmd_ReadDeviceType
-;;    call Out_8042_Aux
-;;    ; Send ok, continue
-;;    jz short Int15h_C2_ReadDeviceType_SendOK
-;;    ; Send failed, get out
-;;    jmp Int15h_C2_InterfaceError
-    ;; [o866] we can assume that if this call returns, it was successful.
-;;    call Out_8042_Aux_NoReturnOnError
-;;Int15h_C2_ReadDeviceType_SendOK:
-;;;;    ; Wait for Ack
-;;;;    call Int15h_C2_WaitAck
-;;;;    ; Ack OK? Continue
-;;;;    jz short Int15h_C2_ReadDeviceType_AckOK
-;;;;    ; No Ack - Exit
-;;;;    jmp Int15h_C2_Exit
-;;    ;; [o866] we can assume that if this call returns, it was successful.
-;;    call Int15h_C2_WaitAck_NoReturnOnError
     call Out_8042_Aux_And_WaitAck_NoReturnOnError
-Int15h_C2_ReadDeviceType_AckOK:
-;;;;    call ReadAuxData
-;;;;    jz short Int15h_C2_ReadDeviceType_ReadFailed
-;;    ;; [o866] we can assume that if this call returns, it was successful.
-;;    call ReadAuxData_NoReturnOnError
-;;    ; Read OK, set result & get out
-;;    mov Int15h_C2_BP_bh, al
-;;    jmp Int15h_C2_Success
-;;;;Int15h_C2_ReadDeviceType_ReadFailed:
-;;;;    ; Read failed = I/F error
-;;;;    jmp Int15h_C2_InterfaceError
+
+    ; Ack ok, read the response
     mov dl, 1 ;; Force writing result into BH
     jmp short Int15_C2_ResetMouse_ReadLastByteAndJumpOnSuccess
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Int15h C2 SubFunction 5: Mouse Initialization
@@ -651,77 +493,15 @@ Int15h_C2_ReadDeviceType_AckOK:
 ; cf: 0 = no error, 1 = error
 Int15h_C2_MouseInit:
     ; Check supplied packet size
-;;    or Int15h_C2_BP_Command, 0
-;;    jz short Int15h_C2_MouseInit_InvalidInput
-;;    cmp Int15h_C2_BP_Command, 8
-;;    ; size <= 8? -> valid
-;;    jbe short Int15h_C2_MouseInit_Valid
-;;    ; Invalid: fallthrough
-;;Int15h_C2_MouseInit_InvalidInput:
-;;    ; Invalid input -> error
-;;    jmp Int15h_C2_InvalidInputError
     dec bh  ;; so a zero which is invalid would become 0FFh, thus the unsigned comparison catches all
     cmp bh, 7
     _JA Int15h_C2_InvalidInputError
-    xor dx, dx ;; Do not write the result
+
+    xor dx, dx ;; DX = 0 -> Do not write the result
+    ; The rest of the code path is so similar to ResetMouse
+    ; that I just decided to use it outright.
+    ; Close enough (tm)
     jmp Int15h_C2_ResetMouse_Execute
-
-;;;;
-;;;;
-;;;;Int15h_C2_MouseInit_Valid:
-;;;;    ; Zero old packet size and set to new value
-;;;;;;    and byte ptr ds:Mouse_PacketSizeFlags, 0f8h
-;;;;;;;;    mov al, Int15h_C2_BP_Command
-;;;;;;;;    dec al
-;;;;;;;;    or byte ptr ds:Mouse_PacketSizeFlags, al
-;;;;;;    ;; bh has our corrected value already
-;;;;;;    or byte ptr ds:Mouse_PacketSizeFlags, bh
-;;;;    mov si, Mouse_PacketSizeFlags   ; save ONE byte :DDD
-;;;;    and byte ptr ds:[si], 0f8h
-;;;;    or byte ptr ds:[si], bh
-;;;;
-;;;;    ; Try reset command 3 times
-;;;;    mov bh, 3
-;;;;Int15h_C2_MouseInit_TryLoop:
-;;;;    ; Send command
-;;;;    mov al, Cmd_Reset 
-;;;;    call Out_8042_Aux
-;;;;;;    ; Send OK? Exit loop
-;;;;;;    jz short Int15h_C2_MouseInit_SendOK
-;;;;;;    ; Send failed -> Error
-;;;;;;    jmp short Int15h_C2_MouseInit_Error
-;;;;    jnz short Int15h_C2_MouseInit_Error
-;;;;
-;;;;Int15h_C2_MouseInit_SendOK:
-;;;;    ; Wait for ack, set status
-;;;;    call Int15h_C2_WaitAck
-;;;;    ; Send failed? -> Get out
-;;;;    jnz short Int15h_C2_MouseInit_Error
-;;;;    ; Try to read first byte from aux device
-;;;;    call ReadAuxData
-;;;;    ; Read failed? -> Get out
-;;;;    jz short Int15h_C2_MouseInit_Error
-;;;;    ; Try to read second byte from aux device
-;;;;    call ReadAuxData
-;;;;    ; Read OK? -> Finished
-;;;;;;    jnz short Int15h_C2_MouseInit_Success
-;;;;    
-;;;;    _JNZ Int15h_C2_Success
-;;;;    ; Fallthrough on error
-;;;;Int15h_C2_MouseInit_Error:
-;;;;    ; On error -> loop & retry
-;;;;    dec bh
-;;;;    jnz short Int15h_C2_MouseInit_TryLoop
-;;;;    ; Failed after 3 loops -> Error
-;;;;    jmp Int15h_C2_InterfaceError
-;;;;
-;;;; It's slightly different but we should be able
-;;;; The only real difference is that the ID is being stored in BL/BH
-;;;; which technically shouldn't break anything
-
-;;Int15h_C2_MouseInit_Success:
-;;    ; Everything OK!
-;;    jmp Int15h_C2_Success
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Int15h C2 SubFunction 6: Extended Commands
@@ -729,29 +509,26 @@ Int15h_C2_MouseInit:
 ;   -> 0 = return status, 1 = set scale to 1:1, 2 = set scale to 2:1
 ; cf: 0 = no error, 1 = error
 Int15h_C2_ExtendedCommand:
-;;    mov al, Int15h_C2_BP_Command
-;;    or al,al
     or bh, bh
     jz short Int15h_C2_ExtendedCommand_GetStatus
-;;    dec al
+
     dec bh
+
+    ; If it is 0 now: Int15h C2 SubFunction 6, 1: Set scaling to 1:1
     mov al, Cmd_ResetScaling
     jz short Int15h_C2_ExtendedCommand_Scale21_Execute
-;;    dec al
 
 
-    inc ax
+    ; If it is 0 now: Int15h C2 SubFunction 6, 2: Set scaling to 2:1
+    inc ax ; AL is now Cmd_SetScaling
     dec bh
-;;    jz short Int15h_C2_ExtendedCommand_Scale21
+
+    ; Also not it? Then we leave
     _JNZ Int15h_C2_InvalidFunctionError
 
+; Execution code path for C2/6 scaling commands 0/1
 Int15h_C2_ExtendedCommand_Scale21_Execute:
     jmp Int15h_C2_SendByteWaitAckAndExit
-
-;;    jmp Int15h_C2_InvalidFunctionError  ; invalid subfunction
-
-;; CRAZY idea... use the flags as a jump table??
-;; ok sadly doesnt work as nicely as it does on 68, scrapping that idea
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Int15h C2 SubFunction 6, 0: Get status
@@ -760,37 +537,9 @@ Int15h_C2_ExtendedCommand_Scale21_Execute:
 Int15h_C2_ExtendedCommand_GetStatus:
     ; Send status request command to aux device
     mov al, Cmd_StatusRequest
-;;    call Out_8042_Aux
-;;    ; sent ok? continue
-;;    jz short Int15h_C2_ExtendedCommand_GetStatus_SendOK
-;;    ; sending failed, get out
-;;    jmp Int15h_C2_InterfaceError
-    ;; [o866] we can assume that if this call returns, it was successful.
-;;    call Out_8042_Aux_NoReturnOnError
-;;Int15h_C2_ExtendedCommand_GetStatus_SendOK:
-;;;;    call Int15h_C2_WaitAck  ; wait response and set status
-;;;;;;    jz short Int15h_C2_ExtendedCommand_GetStatus_AckOK
-;;;;;;    jmp Int15h_C2_Exit
-;;;;    jnz Int15h_C2_Exit
-;;    ;; [o866] we can assume that if this call returns, it was successful.
-;;    call Int15h_C2_WaitAck_NoReturnOnError
     call Out_8042_Aux_And_WaitAck_NoReturnOnError
-Int15h_C2_ExtendedCommand_GetStatus_AckOK:
-    ; Read byte 1, get out on error
-;; Original AWARD
-;;     call ReadAuxData 
-;;    jz short Int15h_C2_ExtendedCommand_GetStatus_Error
-;;    mov Int15h_C2_BP_bl, al
-;;    ; Read byte 2, get out on error
-;;    call ReadAuxData
-;;    jz short Int15h_C2_ExtendedCommand_GetStatus_Error
-;;    mov Int15h_C2_BP_cl, al
-;;    ; Read byte 3, get out on error
-;;    call ReadAuxData
-;;    jz short Int15h_C2_ExtendedCommand_GetStatus_Error
-;;    mov Int15h_C2_BP_dl, al
 
-    ;; [o866] we can assume that if this call returns, it was successful.
+    ; We can now theoretically read the status bytes from the mouse
 ;;    call ReadAuxData_NoReturnOnError
 ;;    mov Int15h_C2_BP_bl, al
 ;;    call ReadAuxData_NoReturnOnError
@@ -807,59 +556,22 @@ fdsfsd:
     dec si
     jnz short fdsfsd
 
-
-    
     ; All read ok, get out
     jmp Int15h_C2_Success
-
-;; [o866] size opt
-;;Int15h_C2_ExtendedCommand_GetStatus_Error:
-;;    jmp Int15h_C2_InterfaceError
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Int15h C2 SubFunction 6, 1: Set scaling to 1:1
-Int15h_C2_ExtendedCommand_Scale11:
-    ; Send reset scaling command
-;;    mov al, Cmd_ResetScaling
-    ; To save space, use command 2's rest of the code path
-;;    jmp short Int15h_C2_ExtendedCommand_Scale21_Execute
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Int15h C2 SubFunction 6, 1: Set scaling to 2:1
-Int15h_C2_ExtendedCommand_Scale21:
-    ; Send set scaling command
-;;    mov al, Cmd_SetScaling
-;;Int15h_C2_ExtendedCommand_Scale21_Execute:
-;;    call Out_8042_Aux
-;;    ; Sent ok? continue
-;;    jz short Int15h_C2_ExtendedCommand_Scale21_SendOK
-;;    ; Sending failed, get out
-;;    jmp Int15h_C2_InterfaceError
-    ;; [o866] we can assume that if this call returns, it was successful.
-;;    call Out_8042_Aux_NoReturnOnError
-;;Int15h_C2_ExtendedCommand_Scale21_SendOK:
-;;;;    ; Wait for ack
-;;;;    call Int15h_C2_WaitAck
-;;;;    ; Exit C2 with WaitAck's result
-;;;;    jmp Int15h_C2_Exit
-;;    jmp Int15h_C2_WaitAckAndExit
-;;    jmp Int15h_C2_SendByteWaitAckAndExit
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Int15h C2 SubFunction 7: Set Device Driver Far Call address
 ; ES:BX on stack frame = Driver's far call address
 Int15h_C2_SetDriverFarCall:
-;;    mov ax, Int15h_C2_BP_Segment
-;;    mov word ptr ds:Mouse_FarCallSegment, ax
-;;    mov ax, Int15h_C2_BP_Offset
-;;    mov word ptr ds:Mouse_FarCallOffset, ax
-;;    or byte ptr ds:Mouse_PacketSizeFlags, Mouse_DriverFarCallFlag
+    ; Technically ES and BX on stack frame are supposed to be used
+    ; But these two registers have NOT been touched yet, so we can
+    ; use them outright
     mov si, offset Mouse_FarCallOffset
     mov ds:[si], bx
     mov ds:[si+2], es
     or byte ptr ds:[si+5], Mouse_DriverFarCallFlag
-
-    ; This routine can't fail but it really ought to on NULL or something...
+    ; This routine can't fail but it really ought to on NULL.
+    ; Whatever, it's worked for hundereds of years...
     jmp Int15h_C2_Success
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -881,6 +593,17 @@ Int15h_C2_SubFunctionTable:
 ;; in the ROM, so it is not practical
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Sample Rate Conversion Table (reports per second)
+Int15h_C2_SampleRateTable:
+    db 0ah  ; 00 = 10  reports/second
+    db 14h  ; 01 = 20  reports/second
+    db 28h  ; 02 = 40  reports/second
+    db 3ch  ; 03 = 60  reports/second
+    db 50h  ; 04 = 80  reports/second
+    db 64h  ; 05 = 100 reports/second
+    db 0c8h ; 06 = 200 reports/second
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Disable AOBF IRQ In KBC
 ; cf: 0 = No error, 1 = KBC error 
 DisableAOBFIrq:
@@ -889,13 +612,6 @@ DisableAOBFIrq:
 DisableAOBFIrq_Execute:
     mov cl, KBC_WriteCMD
     call SendCommandToKBC
-;;    jnz short DisableAOBFIrq_Error
-;;    clc
-;;    jmp short DisableAOBFIrq_Exit
-;;DisableAOBFIrq_Error:
-;;    stc
-;;DisableAOBFIrq_Exit:
-;;    retn
     clc
     jz short DisableAOBFIrq_SkipSuccess
     stc
@@ -907,16 +623,7 @@ DisableAOBFIrq_SkipSuccess:
 ; cf: 0 = No error, 1 = KBC error 
 EnableAOBFIrq:
     mov al, 47h
-;;    mov cl, KBC_WriteCMD
-;;    call SendCommandToKBC
-;;    jnz short EnableAOBFIrq_Error
-;;    clc
-;;    jmp short EnableAOBFIrq_Exit
-;;EnableAOBFIrq_Error:
-;;    stc
-;;EnableAOBFIrq_Exit:
-;;    retn
-    ;; [o866] size opt :)
+    ;; Enable = Disable with a different command value
     jmp short DisableAOBFIrq_Execute
 
 Int15_C2_TryAuxFull:
@@ -934,33 +641,11 @@ Int15_C2_TryAuxFull_Loop:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Wait for AUX Command Response
 ; cf: 0 = No error, 1 = error
-; Error codes as usual
-;; [o866] size opt
-;; On errror, the error code is loaded into al for further processing by the C2 exit handler
+; Returns Error code for C2 Exit in al
 Int15h_C2_WaitAck:
-;;    push cx
-;;    xor cx, cx
-;;Int15h_C2_WaitAck_Loop:
-;;    ; Wait for aux output buffer not to be full
-;;    push cx
-;;    call Out_8042_Aux_Full
-;;    pop cx
-;;;;    ; If buffer not full, we can continue
-;;;;    jnz short Int15h_C2_WaitAck_GetAck
-;;;;    ; Else keep looping
-;;;;    loop short Int15h_C2_WaitAck_Loop
-;;;;    ; !!!!!!!!!!!
-;;;;    ; Timeout error - use generic error code path for this
-;;;;    jmp short Int15h_C2_WaitAck_GenericError
-;;
-;;    loopz short Int15h_C2_WaitAck_Loop
-;;    jz short Int15h_C2_WaitAck_GenericError
-
-;;    mov si, Int15h_C2_WaitAck_GenericError
+    ; Try and wait for AUX buffer to be full
     call Int15_C2_TryAuxFull
-    jz short    Int15h_C2_WaitAck_GenericError
-
-Int15h_C2_WaitAck_GetAck:
+    jz short Int15h_C2_WaitAck_GenericError
     ; Check Ack Code
     in al, KBC_DataPort
     cmp al, KBC_Aux_Code_Ack
@@ -969,36 +654,27 @@ Int15h_C2_WaitAck_GetAck:
     cmp al, KBC_Aux_Code_Resend
     jne short Int15h_C2_WaitAck_GenericError
     ; Resend code was returned
-;;    mov Int15h_C2_BP_Error, Int15h_AH_Resend
     mov al, Int15h_AH_Resend
     jmp short Int15h_C2_WaitAck_Error
 
+;; Flags Interface Error in AL
 Int15h_C2_WaitAck_GenericError:
-;;    mov Int15h_C2_BP_Error, Int15h_AH_InterfaceError
     mov al, Int15h_AH_InterfaceError
     ; fallthrough
 Int15h_C2_WaitAck_Error:
     ; Error happened, clear packet size in 27h byte
     and byte ptr ds:Mouse_PacketSizeFlags, 0f0h
-    ; Set carry flag
+    ; Set carry flag (cf 1 = error)
     or Int15h_C2_BP_Flags, 1
     jmp short Int15h_C2_WaitAck_Exit
 
 Int15h_C2_WaitAck_Success:
     ; Clear error code & Carry flag on stack frame
-;;    mov Int15h_C2_BP_Error, 00
     mov al, 0
     and Int15h_C2_BP_Flags, 0fffeh
 
-;; [o866] thoughts
-;; this isn't really necessary, as we never take a decision based on *success*
-;; all Waitack = success conditions result in us taking the success code path which sets all this garbage for us
-;; CORRECTION: No actually at one point we call waitack and jump to regular exit, not succes... Bleh. 
-
 Int15h_C2_WaitAck_Exit:
-;;    pop cx
     ; Set ZF according to result
-;;    or Int15h_C2_BP_Error, 0
     or al, 0
     ret
 
@@ -1006,57 +682,46 @@ Int15h_C2_WaitAck_Exit:
 ; Read data from the mouse when the aux output buffer is full
 ; zf: 0 = data in AL, 1 = error or no data
 ReadAuxData:
-;;    push cx
-;;    xor cx, cx
-;;ReadAuxData_Loop:
-;;    push cx
-;;    call Out_8042_Aux_Full
-;;    pop cx
-;;    ; Is AOB full? If yes, read the byte, else keep looping
-;;
-;;;;     jnz short ReadAuxData_ReadData
-;;;;    loop short ReadAuxData_Loop
-;;;;    ; Timeout
-;;;;    jmp short ReadAuxData_Exit
-;;
-;;    loopz short ReadAuxData_Loop
-;;    jz short ReadAuxData_Exit
-;;
+    ; Try and wait for AUX buffer to be full
     call Int15_C2_TryAuxFull
-;;    jz short ReadAuxData_Exit
-;; dont need this, the caller will not use
-;; the result anyway
-
-ReadAuxData_ReadData:
+    ; Read the data - if there is none, the result can be discarded by the caller
     in al, KBC_DataPort
-ReadAuxData_Exit:
-;;    pop cx
+    ; Doesn't affect flags, so the zero flag will contain result of AUX buffer wait
 ReadAuxData_ReturnInstruction:
     ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; SIZE OPTIMIZATION!!!!
-; This one does NOT return on error, instead it pops the return address and moves DIRECTLY
+; ReadAuxData but it DOES NOT return on error, instead it pops the return address and moves DIRECTLY
 ; to the C2 interface error!!
 ReadAuxData_NoReturnOnError:
+    ; Read the data. Return as normal in case of success...
     call ReadAuxData
-    ; Read OK, return like normal
-ReadAuxData_ErrorCheck:
+    ; ... using another function's return instruction :D
     jnz short ReadAuxData_ReturnInstruction
-;;    add sp, 2
 ReadAuxData_Error:
-;;    inc sp
-;;    inc sp
-    pop si ; register can be trashed, save 1 byte :))
+    ; Discard return address into an unused register
+    pop si
     jmp Int15h_C2_InterfaceError
 
-; This one does NOT return on error, instead it pops the return address and moves DIRECTLY
-; to the C2 interface error!!
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; SIZE OPTIMIZATION!!!!
+; This calls two functions:
+; 1.    Out_8042_Aux - but does NOT return on error, instead it pops the return address and moves DIRECTLY to the C2 interface error!!
+;       This function sends a byte to the mouse.
+; 2.    Int15h_C2_WaitAck - but does NOT return on error, instead it pops the return address and moves DIRECTLY to the C2 EXIT!!
+;       EXIT because WaitAck already fills out all the result stuff on the stack frame
+;       This function sends a byte to the mouse.
+;       
 Out_8042_Aux_And_WaitAck_NoReturnOnError:
     call Out_8042_Aux
     jnz short ReadAuxData_Error
-;;    jz short ReadAuxData_ReturnInstruction
+    ; Fall through
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; SIZE OPTIMIZATION!!!!
+;  Int15h_C2_WaitAck but does NOT return on error, instead it pops the return address and moves DIRECTLY to the C2 EXIT!!
+;  EXIT because WaitAck already fills out all the result stuff on the stack frame
 Int15h_C2_WaitAck_NoReturnOnError:
     call Int15h_C2_WaitAck
     jz short ReadAuxData_ReturnInstruction
@@ -1079,31 +744,21 @@ Int15h_ContinueProcessing:
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Packet size translation table
-;;size1:  db 6                ; 1
-;;size2:  db 6,7              ; 2
-;;size3:  db 6,4,2            ; 3
-;;size4:  db 6,7,4,2          ; 4
-;;size5:  db 6,4,2,5,3        ; 5
-;;size6:  db 6,7,4,2,5,3      ; 6
-;;size7:  db 6,4,2,0,5,3,1    ; 7
-;;size8:  db 6,7,4,2,0,5,3,1  ; 8
-
 ;; Some of these can be expressed as pars of others
-
-size1:
-size2:
-size4:
-size6:  db 6,7,4,2,5,3      ; 6
-size3:
-size7:  db 6,4,2,0,5,3,1    ; 7
-size8:  db 6,7,4,2,0,5,3,1  ; 8
-size5:  db 6,4,2,5,3        ; 5
+;; size1:   db 6                ; 1
+;; size2:   db 6,7              ; 2
+;; size3:   db 6,4,2            ; 3
+;; size4:   db 6,7,4,2          ; 4
+size5:      db 6,4,2,5,3        ; 5
+size6:      db 6,7,4,2,5,3      ; 6
+size7:      db 6,4,2,0,5,3,1    ; 7
+size8:      db 6,7,4,2,0,5,3,1  ; 8
 
 PacketSizeTable:
-		dw	offset size1
-		dw	offset size2
-		dw	offset size3
-		dw	offset size4
+		dw	offset size5    ;; size1
+		dw	offset size6    ;; size2
+		dw	offset size5    ;; size3
+		dw	offset size6    ;; size4
 		dw	offset size5
 		dw	offset size6
 		dw	offset size7
@@ -1120,6 +775,5 @@ PacketSizeTable:
 ; Enable mouse support in the BIOS features byte
     org Sys_BiosSupportedFeatures
     db ((CONST_BiosSupportedFeatures) OR 080h)
-
 
 SEG_15 ENDS
