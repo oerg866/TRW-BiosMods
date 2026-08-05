@@ -277,8 +277,7 @@ Int15h_C2_Handler:
 Int15h_C2_Success:
     ; Set flags on stack frame for success and
     ; the return code in AL we put on the stack frame later
-    xor al, al
-    and Int15h_C2_BP_Flags, 0fffeh 
+    xor ax, ax
     jmp short Int15h_C2_Exit
 Int15h_C2_InvalidFunctionError:
 ;;    mov Int15h_C2_BP_Error, Int15h_AH_InvalidFunction
@@ -297,10 +296,15 @@ Int15h_C2_NoFarCallInstalledError:
     mov al, Int15h_AH_NoFarCallInstalled
 Int15h_C2_ErrorExit:
     ; Set carry flag in stack frame
-    or Int15h_C2_BP_Flags, 01h
+    mov ah, 01h
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Int 15h / C2 EXIT path
+; Expects RETURN CODE for error on stack frame in AL
+; Expects FLAGS for flags on stack frame in AH (!!!)
 Int15h_C2_Exit:
-    ;; [o866] size opt, we expect error code in al here and Int15h_C2_BP_Flags already set
     mov Int15h_C2_BP_Error, al
+    and Int15h_C2_BP_Flags, 0FEh
+    or byte ptr Int15h_C2_BP_Flags, ah
     ; Re-Enable AOBF IRQ
     call EnableAOBFIrq
     ; Restore stack & exit
@@ -633,13 +637,12 @@ Int15h_C2_WaitAck_Error:
     ; Error happened, clear packet size in 27h byte
     and byte ptr ds:Mouse_PacketSizeFlags, 0f0h
     ; Set carry flag (cf 1 = error)
-    or Int15h_C2_BP_Flags, 1
+    mov ah, 1
     jmp short Int15h_C2_WaitAck_Exit
 
 Int15h_C2_WaitAck_Success:
-    ; Clear error code & Carry flag on stack frame
-    mov al, 0
-    and Int15h_C2_BP_Flags, 0fffeh
+    ; Clear error code & Carry flag for stack frame
+    xor ax, ax
 
 Int15h_C2_WaitAck_Exit:
     ; Set ZF according to result
