@@ -288,7 +288,9 @@ Int15h_C2_Handler:
     ; [o866] size opt
     ; Disable Aux output buffer full (AOBF) interrupt
     push ax
+    push cx
     call DisableAOBFIrq
+    pop cx
     pop ax
 
 ;; [o866] insert validity check here.. less performant but WAY smaller
