@@ -207,8 +207,8 @@ Int15h_MouseFunction:
 ;;    test cs:Sys_BiosConfigTable+5, 4
 ;;    jnz short Int15h_MouseFunction_Process
 ;;    jmp Int15h_ContinueProcessing
+;;Int15h_MouseFunction_Process:
 
-Int15h_MouseFunction_Process:
     ; Check if mouse present
     push es
     push Bios_RAM_Segment
@@ -217,29 +217,11 @@ Int15h_MouseFunction_Process:
     test byte ptr es:RAM_Bios_Hardware, 4
     pop es
     assume es:nothing
-    ; Mouse present, continue
-    jnz short Int15h_MousePresent
     ; Mouse not present, go back to int15 main path
-    jmp Int15h_ContinueProcessing
+    _JZ Int15h_ContinueProcessing
 
 Int15h_MousePresent:
-    cmp ah, 0C2h
-    jz short Int15h_C2_Handler
-    ; fallthrough
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Int15h Function C1 Handler - Get Extended Data Segment
-; Outputs XBDA segment in ES and leaves the interrupt outright
-Int15h_C1_Handler:
-    push Bios_RAM_Segment
-    pop es
-    push [word ptr es:RAM_ExtData_Segment_ID]
-    pop es
-    iret
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Int15h Function C2 Handler - Pointing Device Interface
-Int15h_C2_Handler:
     ; Build a stack frame
     push ax   ; [bp+10]
     push bx   ; [bp+0e]
@@ -254,17 +236,33 @@ Int15h_C2_Handler:
 
     ; Disable Aux output buffer full (AOBF) interrupt
     ; we dont need DX, so we can use it to store AL which gets clobbered in DisableAOBFIrq
-    mov dl, al
+    mov dx, ax
     call DisableAOBFIrq
-
-    test dl, 0f8h
-    jnz short Int15h_C2_InvalidFunctionError
 
     ; Data segment for the C2 handler is the XBDA
     push Bios_RAM_Segment
     pop ds
     push [word ptr ds:RAM_ExtData_Segment_ID]
     pop ds
+
+    ; Since we moved AX into DX earlier, the function from AH ended up in DH...
+    cmp dh, 0C1h
+    jnz short Int15h_C2_Handler
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Int15h Function C1 Handler - Get Extended Data Segment
+; Outputs XBDA segment in ES and leaves the interrupt outright
+Int15h_C1_Handler:
+    ; The XBDA segment is already in DS, just move it to ES on the stack frame
+    ; to have it returned to the caller
+    mov Int15h_C2_BP_Segment, ds
+    jmp short Int15h_C1_Exit
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Int15h Function C2 Handler - Pointing Device Interface
+Int15h_C2_Handler:
+    test dl, 0f8h
+    jnz short Int15h_C2_InvalidFunctionError
 
     ; Get handler offset for this subfunction from table and jump to it
     mov si, offset Int15h_C2_SubFunctionTable
@@ -305,6 +303,8 @@ Int15h_C2_Exit:
     mov Int15h_C2_BP_Error, al
     and Int15h_C2_BP_Flags, 0FEh
     or byte ptr Int15h_C2_BP_Flags, ah
+
+Int15h_C1_Exit:
     ; Re-Enable AOBF IRQ
     call EnableAOBFIrq
     ; Restore stack & exit
