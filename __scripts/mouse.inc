@@ -287,14 +287,14 @@ Int15h_C2_Handler:
 
     ; [o866] size opt
     ; Disable Aux output buffer full (AOBF) interrupt
-    push ax
-    push cx
+;;    push ax
+    ;; we dont need DX, so we can use it to store AL which gets clobbered in disableirq
+    mov dl, al
     call DisableAOBFIrq
-    pop cx
-    pop ax
+;;    pop ax
 
 ;; [o866] insert validity check here.. less performant but WAY smaller
-    test al, 0f8h
+    test dl, 0f8h
     jnz short Int15h_C2_InvalidFunctionError
 
     push Bios_RAM_Segment
@@ -313,12 +313,15 @@ Int15h_C2_Handler:
 ;;    test byte ptr es:RAM_Bios_Hardware, 4
 ;;    jz Int15h_C2_InterfaceError
     ; get entry in subfunction address table and jump to it
-    xor ah, ah
-;;    mov al, Int15h_C2_BP_SubFunction
-;;  ^ al is still valid at this point
-    shl ax, 1
+;;    xor ah, ah
+;;;;    mov al, Int15h_C2_BP_SubFunction
+;;;;  ^ al is still valid at this point
+;;    shl ax, 1
     mov si, offset Int15h_C2_SubFunctionTable
-    add si, ax
+;;    add si, ax
+    xor dh, dh
+    shl dx, 1
+    add si, dx
     jmp word ptr cs:[si]
 
 ; Error handling
@@ -1020,7 +1023,9 @@ ReadAuxData:
 ;;    jz short ReadAuxData_Exit
 ;;
     call Int15_C2_TryAuxFull
-    jz short ReadAuxData_Exit
+;;    jz short ReadAuxData_Exit
+;; dont need this, the caller will not use
+;; the result anyway
 
 ReadAuxData_ReadData:
     in al, KBC_DataPort
