@@ -194,6 +194,7 @@ Mouse_CheckDataPacket_Loop:
     stosw
     stosw
     stosw
+
 Mouse_CheckDataPacket_End:
     retn
 
