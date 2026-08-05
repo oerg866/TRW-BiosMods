@@ -223,7 +223,6 @@ Int15h_MouseFunction_Process:
     jmp Int15h_ContinueProcessing
 
 Int15h_MousePresent:
-
     cmp ah, 0C2h
     jz short Int15h_C2_Handler
     ; fallthrough
@@ -241,19 +240,6 @@ Int15h_C1_Handler:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Int15h Function C2 Handler - Pointing Device Interface
 Int15h_C2_Handler:
-;;    ; is function valid?
-;;    test al, 0F8h
-;;    jz short Int15h_C2_FunctionIsValid
-;;    ; Function is invalid, exit
-;;    mov ah, Int15h_AH_InvalidFunction
-;;    stc
-;;    retf 2
-;;
-;; Int15h_C2_FunctionIsValid:
-;;    ; Function is valid, continue processing
-
-;;  ^ this is moved further down so we can use our usual error code path to save some bytes
-
     ; Build a stack frame
     push ax   ; [bp+10]
     push bx   ; [bp+0e]
@@ -266,40 +252,22 @@ Int15h_C2_Handler:
     push bp   ; [bp+00]
     mov bp, sp
 
-    ; [o866] size opt
     ; Disable Aux output buffer full (AOBF) interrupt
-;;    push ax
-    ;; we dont need DX, so we can use it to store AL which gets clobbered in disableirq
+    ; we dont need DX, so we can use it to store AL which gets clobbered in DisableAOBFIrq
     mov dl, al
     call DisableAOBFIrq
-;;    pop ax
 
-;; [o866] insert validity check here.. less performant but WAY smaller
     test dl, 0f8h
     jnz short Int15h_C2_InvalidFunctionError
 
+    ; Data segment for the C2 handler is the XBDA
     push Bios_RAM_Segment
     pop ds
     push [word ptr ds:RAM_ExtData_Segment_ID]
     pop ds
-;;    ; Set ES to BIOS RAM segment (0040)
-;;    mov ax, Bios_RAM_Segment
-;;    mov es, ax
-;;    ; Set DS to XBDA Segment (get from 40:0E)
-;;    mov ax, es:RAM_ExtData_Segment_ID
-;;    mov ds, ax
 
-;; [o866] size opt
-    ; Check mouse flag again (we already did this, WTF Award)
-;;    test byte ptr es:RAM_Bios_Hardware, 4
-;;    jz Int15h_C2_InterfaceError
-    ; get entry in subfunction address table and jump to it
-;;    xor ah, ah
-;;;;    mov al, Int15h_C2_BP_SubFunction
-;;;;  ^ al is still valid at this point
-;;    shl ax, 1
+    ; Get handler offset for this subfunction from table and jump to it
     mov si, offset Int15h_C2_SubFunctionTable
-;;    add si, ax
     xor dh, dh
     shl dx, 1
     add si, dx
@@ -307,8 +275,8 @@ Int15h_C2_Handler:
 
 ; Error handling
 Int15h_C2_Success:
-;;    mov Int15h_C2_BP_Error, Int15h_AH_Success
-;;    mov al, Int15h_AH_Success ; actually ...
+    ; Set flags on stack frame for success and
+    ; the return code in AL we put on the stack frame later
     xor al, al
     and Int15h_C2_BP_Flags, 0fffeh 
     jmp short Int15h_C2_Exit
