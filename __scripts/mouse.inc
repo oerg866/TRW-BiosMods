@@ -944,10 +944,15 @@ ReadAuxData_Loop:
     call Out_8042_Aux_Full
     pop cx
     ; Is AOB full? If yes, read the byte, else keep looping
-    jnz short ReadAuxData_ReadData
-    loop short ReadAuxData_Loop
-    ; Timeout
-    jmp short ReadAuxData_Exit
+
+;;     jnz short ReadAuxData_ReadData
+;;    loop short ReadAuxData_Loop
+;;    ; Timeout
+;;    jmp short ReadAuxData_Exit
+
+    loopz short ReadAuxData_Loop
+    jz short ReadAuxData_Exit
+
 ReadAuxData_ReadData:
     in al, KBC_DataPort
 ReadAuxData_Exit:
