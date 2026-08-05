@@ -830,6 +830,12 @@ Int15h_C2_SubFunctionTable:
     dw offset Int15h_C2_ExtendedCommand
     dw offset Int15h_C2_SetDriverFarCall
 
+;; [o866] thoughts
+;; We could save 8 bytes here by only storing the 8 bit offset to the
+;; very first function but the problem is that scattered code caves
+;; may require us to store different functions in different locations
+;; in the ROM, so it is not practical
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Disable AOBF IRQ In KBC
 ; cf: 0 = No error, 1 = KBC error 
@@ -883,13 +889,16 @@ Int15h_C2_WaitAck_Loop:
     push cx
     call Out_8042_Aux_Full
     pop cx
-    ; If buffer not full, we can continue
-    jnz short Int15h_C2_WaitAck_GetAck
-    ; Else keep looping
-    loop short Int15h_C2_WaitAck_Loop
-    ; !!!!!!!!!!!
-    ; Timeout error - use generic error code path for this
-    jmp short Int15h_C2_WaitAck_GenericError
+;;    ; If buffer not full, we can continue
+;;    jnz short Int15h_C2_WaitAck_GetAck
+;;    ; Else keep looping
+;;    loop short Int15h_C2_WaitAck_Loop
+;;    ; !!!!!!!!!!!
+;;    ; Timeout error - use generic error code path for this
+;;    jmp short Int15h_C2_WaitAck_GenericError
+
+    loopz short Int15h_C2_WaitAck_Loop
+    jz short Int15h_C2_WaitAck_GenericError
 
 Int15h_C2_WaitAck_GetAck:
     ; Check Ack Code
