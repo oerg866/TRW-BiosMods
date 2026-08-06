@@ -128,6 +128,12 @@ _JNZ    macro WHERE
     .286
     endm
 
+_JZ    macro WHERE
+    .386
+    jz WHERE
+    .286
+    endm
+
 _JA     macro WHERE
     .386
     ja WHERE
