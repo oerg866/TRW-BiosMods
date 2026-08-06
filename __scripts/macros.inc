@@ -148,3 +148,6 @@ Bios_RAM_Segment        EQU 40h ; BIOS internal RAM segment
 RAM_ExtData_Segment_ID  EQU 0Eh ; 40:0E Offset in BIOS RAM that contains the extended data segment identifier
 RAM_Bios_Hardware       EQU 10h ; 40:10 Installed hardware
 
+
+; Common Code Caves
+CODECAVE_ROMCopyright0 = 0

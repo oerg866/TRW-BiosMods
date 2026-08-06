@@ -77,7 +77,7 @@ ENDIF
 ENDIF ; BIOS_SupportsDualChannel
 
 ; The free Code Cave:tm: starts here
-CODECAVE_HDDParams LABEL BYTE
+CODECAVE_HDDParams = $
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Menu item overrides

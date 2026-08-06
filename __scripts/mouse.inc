@@ -59,7 +59,7 @@ Int15h_C2_BP_dl             EQU byte ptr [bp+0ah] ; dl
 
 SEG_15 SEGMENT USE16 PARA PUBLIC 'CODE'
 
-    org 0
+    org offset CODECAVE_HDDParams
 
 IRQ12_New:
 ;;    push ax
@@ -76,11 +76,6 @@ IRQ12_New:
     sti
 
     call getXBDASegmentIntoDS
-;;    mov bx, Bios_RAM_Segment
-;;    mov ds, bx
-;;
-;;    mov bx, ds:RAM_ExtData_Segment_ID
-;;    mov ds, bx
     assume ds:nothing   ; <-- why?
 
     mov bl, ds:Mouse_CountIndex
@@ -554,33 +549,12 @@ Int15h_C2_SetDriverFarCall:
     jmp Int15h_C2_Success
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Int15h C2 Sub function table, 16 bytes
-Int15h_C2_SubFunctionTable:
-    dw offset Int15h_C2_EnableDisableMouse
-    dw offset Int15h_C2_ResetMouse
-    dw offset Int15h_C2_SetSamplingRate
-    dw offset Int15h_C2_SetResolution
-    dw offset Int15h_C2_ReadDeviceType
-    dw offset Int15h_C2_MouseInit
-    dw offset Int15h_C2_ExtendedCommand
-    dw offset Int15h_C2_SetDriverFarCall
-
-;; [o866] thoughts
-;; We could save 8 bytes here by only storing the 8 bit offset to the
-;; very first function but the problem is that scattered code caves
-;; may require us to store different functions in different locations
-;; in the ROM, so it is not practical
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Sample Rate Conversion Table (reports per second)
-Int15h_C2_SampleRateTable:
-    db 0ah  ; 00 = 10  reports/second
-    db 14h  ; 01 = 20  reports/second
-    db 28h  ; 02 = 40  reports/second
-    db 3ch  ; 03 = 60  reports/second
-    db 50h  ; 04 = 80  reports/second
-    db 64h  ; 05 = 100 reports/second
-    db 0c8h ; 06 = 200 reports/second
+; Update Code Cave location
+CODECAVE_HDDParams = $
+; !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+; We put some of the external helper functions outside the HDD code cave!
+; This is because else that bigass code cave is still not enough...
+    ORG offset CODECAVE_ROMCopyright0
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Disable AOBF IRQ In KBC
@@ -706,19 +680,34 @@ Int15h_C2_WaitAck_NoReturnOnError:
     pop si ; register can be trashed, save 1 byte :))
     jmp Int15h_C2_Exit
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Int15h C2 Sub function table, 16 bytes
+Int15h_C2_SubFunctionTable:
+    dw offset Int15h_C2_EnableDisableMouse
+    dw offset Int15h_C2_ResetMouse
+    dw offset Int15h_C2_SetSamplingRate
+    dw offset Int15h_C2_SetResolution
+    dw offset Int15h_C2_ReadDeviceType
+    dw offset Int15h_C2_MouseInit
+    dw offset Int15h_C2_ExtendedCommand
+    dw offset Int15h_C2_SetDriverFarCall
+
+;; [o866] thoughts
+;; We could save 8 bytes here by only storing the 8 bit offset to the
+;; very first function but the problem is that scattered code caves
+;; may require us to store different functions in different locations
+;; in the ROM, so it is not practical
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Bend Int15 handler to call our MouseFunction...function for C1/C2
-    org offset Int15_CheckMouse
-    cmp ah, 0C1h
-    jnz NoC1
-    jmp Int15h_MouseFunction
-NoC1:
-    cmp ah, 0C2h
-    jnz NoC2
-    jmp Int15h_MouseFunction
-NoC2:
-Int15h_ContinueProcessing:
+; Sample Rate Conversion Table (reports per second)
+Int15h_C2_SampleRateTable:
+    db 0ah  ; 00 = 10  reports/second
+    db 14h  ; 01 = 20  reports/second
+    db 28h  ; 02 = 40  reports/second
+    db 3ch  ; 03 = 60  reports/second
+    db 50h  ; 04 = 80  reports/second
+    db 64h  ; 05 = 100 reports/second
+    db 0c8h ; 06 = 200 reports/second
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Packet size translation table
@@ -741,6 +730,22 @@ PacketSizeTable:
 		dw	offset size6
 		dw	offset size7
 		dw	offset size8
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Update ROM Copyright 0 code cave location
+CODECAVE_ROMCopyright0 = $
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Bend Int15 handler to call our MouseFunction...function for C1/C2
+    org offset Int15_CheckMouse
+    cmp ah, 0C1h
+    jnz NoC1
+    jmp Int15h_MouseFunction
+NoC1:
+    cmp ah, 0C2h
+    jnz NoC2
+    jmp Int15h_MouseFunction
+NoC2:
+Int15h_ContinueProcessing:
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Set new IRQ12 Address
@@ -751,7 +756,7 @@ PacketSizeTable:
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Enable mouse support in the BIOS features byte
-    org Sys_BiosSupportedFeatures
+    org offset Sys_BiosSupportedFeatures
     db ((CONST_BiosSupportedFeatures) OR 080h)
 
 SEG_15 ENDS
