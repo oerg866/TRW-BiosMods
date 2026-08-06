@@ -3,6 +3,25 @@
 
 from idaapi import *
 from idc import *
+from dataclasses import dataclass, field
+
+@dataclass
+class MenuItemInfo:
+    ea: int
+    name_ptr: int
+    name: str
+    first_option_ptr: int
+    help_ptr: int
+
+
+@dataclass
+class MenuInfo:
+    sysBiosEntry_ptr: int
+    start_ptr: int
+    end_ptr: int
+    startup_string: int
+    title: str = ""
+    items: list[MenuItemInfo] = field(default_factory=list)
 
 CtrlCharStructNames = {
     0 : 'S_TextCtrl',
@@ -108,7 +127,7 @@ def parseAwardString(ea):
     
     return ea
 
-def parseAwardMenuCallbacks(ea=here()):
+def parseAwardMenuCallbacks(ea):
 
     print(f'parseAwardMenuCallbacks = {hex(ea)}')
     if (createWordForce(ea) == False):
@@ -182,11 +201,16 @@ def absoluteOffset(offset):
 def parseMenuItem(ea):
     # Create the struct
     if createStructForce(ea, -1, 'MenuItem') == False:
-        raise Exception('Failed to parse menu item')
-    
-    itemNamePtr = absoluteOffset(get_wide_word(ea + 2))
-    firstOptionPtr = absoluteOffset(get_wide_word(ea + 11))
-    HelpStrPtr = absoluteOffset(get_wide_word(ea + 23))
+        raise Exception(f'Failed to parse menu item at {hex(ea)}')
+
+    item = MenuItemInfo(
+        ea=ea,
+        name_ptr=absoluteOffset(get_wide_word(ea + 2)),
+        name=readAwardString(absoluteOffset(get_wide_word(ea + 2))),
+        first_option_ptr=absoluteOffset(get_wide_word(ea + 11)),
+        help_ptr=absoluteOffset(get_wide_word(ea + 23)),
+
+    )
 
 # This needs some more logic so it doesn't get stuck here...
 #    min = get_wide_word(ea + 13)
@@ -199,11 +223,27 @@ def parseMenuItem(ea):
 #    for i in range(0, optionCount):
 #        optionOffset = parseAwardString(optionOffset)
 
-    parseAwardString(itemNamePtr)
-    parseAwardString(firstOptionPtr)
 
+    parseAwardString(item.name_ptr)
+    parseAwardString(item.first_option_ptr)
 
-def parseMenuFromScratch():
+    return item
+
+def readAwardString(ea, stop_on_01=True):
+    data = bytearray()
+
+    while True:
+        b = get_wide_byte(ea)
+
+        if b == 0:                  break
+        if stop_on_01 and b == 1:   break
+
+        data.append(b)
+        ea += 1
+
+    return data.decode("cp437", errors="replace")
+
+def parseMenuFromScratch() -> list[MenuInfo]:
     print(f'Parsing menu...')
     
     print(f'here: {hex(here())}')
@@ -229,7 +269,8 @@ def parseMenuFromScratch():
         print(f'{hex(get_wide_word(offset + 2))}')
         print(f'{hex(get_wide_word(offset + 4))}')
         print(f'---------------------------')
-        topMenusItemTuples.append((get_wide_word(offset), get_wide_word(offset+2), get_wide_word(offset+4)))
+        toAdd = [offset, get_wide_word(offset), get_wide_word(offset+2), get_wide_word(offset+4)]
+        topMenusItemTuples.append(toAdd)
 
         # Create sysbios menu def
 
@@ -241,22 +282,42 @@ def parseMenuFromScratch():
 
     print("Processing Items")
 
-    for startPtr, endPtr, startupStr in topMenusItemTuples:
-        print(f'{hex(startPtr)} {hex(endPtr)} {hex(startupStr)}')
+    menus = []
+    names = []
+
+    count = 0
+
+    for entryPtr, startPtr, endPtr, startupStr in topMenusItemTuples:
+
+        menu = MenuInfo(
+            sysBiosEntry_ptr=entryPtr,
+            start_ptr=absoluteOffset(startPtr),
+            end_ptr=absoluteOffset(endPtr),
+            startup_string=absoluteOffset(startupStr),
+        )
+
         itemCount = int((endPtr - startPtr) / sizeofStruct('MenuItem'))
 
-        startPtr = absoluteOffset(startPtr)
-        startupStr = absoluteOffset(startupStr)
         print(f'itemCount = {itemCount}')
 
-        # Parse StartupString
-        parseAwardString(startupStr)
+        parseAwardString(menu.startup_string)
 
-        # Parse Menu Items
-        itemOffset = startPtr
-        for i in range(0, itemCount):
-            parseMenuItem(itemOffset)
+        itemOffset = menu.start_ptr
+
+        for i in range(itemCount):
+            menu.items.append(parseMenuItem(itemOffset))
             itemOffset = getNextItemAddr(itemOffset)
+
+        # Item 0 is the top level menu and contains the names of the submenus
+        if (count == 0):
+            # The names for the next menus live in these items
+            for item in menu.items:
+                names.append(readAwardString(item.first_option_ptr))
+        else:
+            menu.title = names[count - 1]
+
+        count += 1
+        menus.append(menu)
 
     # Now parse all the Menu Callbacks
     offset += 2
@@ -284,7 +345,18 @@ def parseMenuFromScratch():
         offset = getNextItemAddr(offset)
 
     print("donezo schmonezo")
+    return menus
 
-
-
-parseMenuFromScratch()
+# menus = parseMenuFromScratch()
+# 
+# count = 0
+# for menu in menus:
+# 
+#     count += 1
+#     if count == 1: continue
+# 
+#     print (f'[ {menu.title} ]:')
+# 
+#     for item in menu.items:
+#         print('               ', readAwardString(item.name_ptr))
+# 

@@ -3,6 +3,9 @@ import ida_bytes
 import ida_name
 import ida_ua
 import ida_funcs
+import importlib
+
+import award45x_ida
 
 #
 # Find common functions
@@ -926,6 +929,36 @@ FUNCTION_SetupMouse_SetIRQ12Handler = (
     ]
 )
 
+FUNCTION_DummyToGetHDDTableOffset = (           # Dummy to find the offset of the HDD preset table
+    None,                                       # No name
+    [
+        0xfe, 0xc8,                             # dec al
+        0x32, 0xe4,                             # xor ah, ah
+        0xc1, 0xe0, 0x04,                       # shl ax, 4
+        0x8d, 0x36, None, None,                 # lea si, ds:<hdd param table>
+        0x03, 0xf0,                             # add si, ax
+    ],
+    [
+        ( 'HDD_PresetTable', 9, CONST_WORD ),
+    ]
+)
+
+FUNCTION_CalculateHDDSize_BUGGY1 = (
+    'CalculateHDDSize_BUGGY1', 
+    [
+        0x51,                   # push cx
+        0x8b, 0x86, 0x94, 0x00, # mov ax, [bp+94h]
+        0x32, 0xed,             # xor ch, ch
+        0x8a, 0x8e, 0x96, 0x00, # mov cl, [bp+96h]
+        0xf7, 0xe1,             # mul cx
+        0x8a, 0x8e, 0x9b, 0x00, # mov cl, [bp+9bh]
+        0xc1, 0xe1, 0x03,       # shl cx, 3
+        0xf7, 0xe1,             # mul cx,
+        0xb9, 0x09, 0x3d,       # mov cx, 3d09h
+    ],
+    []
+)
+
 STRUCT_ColorStyle_Default = (
     'ColorStyle_Default',
     [
@@ -1061,7 +1094,9 @@ COMMON_FUNCTION_LIST = [
     FUNCTION_DisableAOBFIrq,
     FUNCTION_EnableAOBFIrq,
     FUNCTION_SetupMouse,
-    FUNCTION_SetupMouse_SetIRQ12Handler
+    FUNCTION_SetupMouse_SetIRQ12Handler,
+    FUNCTION_DummyToGetHDDTableOffset,
+    FUNCTION_CalculateHDDSize_BUGGY1
 ]
 
 COMMON_STRUCT_LIST = [
@@ -1198,17 +1233,19 @@ def findPatterns(data, patternlist):
         if ea is not None:
             known = False
 
-            # Check if we already know a matched pattern with this name
-            # This is not a big deal, but we need to prevent it from being added
-            # to the list in order to avoid IDA errors later
-            for knownItem in foundItems:
-                if knownItem[0] == name:
-                    print(f'WARNING: Duplicate pattern; "{name}" is already known!')
-                    known = True
+            # If this is not a dummy
+            if name:
+                # Check if we already know a matched pattern with this name
+                # This is not a big deal, but we need to prevent it from being added
+                # to the list in order to avoid IDA errors later
+                for knownItem in foundItems:
+                    if knownItem[0] == name:
+                        print(f'WARNING: Duplicate pattern; "{name}" is already known!')
+                        known = True
 
-            if known: continue
+                if known: continue
 
-            foundItems.append((name, ea))
+                foundItems.append((name, ea))
 
             matchSegment = getSegment(len(data), ea)
             matchSegmentAbsolute = matchSegment << 16
@@ -1269,6 +1306,54 @@ def writeGenericDataToIncludeFile(outfile, dataList):
         outfile.write(f'{name.ljust(40)} EQU 0{offset:x}h\n')
 #        outfile.write(f' SEGLBL {nameComma.ljust(40)} SEG_{segment}, G_{segment}, 0{(matchLoc & 0xffff):x}h ; Segment {segment}\n')
 
+
+def writeSingleEquate(outfile, name, value):
+    outfile.write(f'{name.ljust(40)} EQU 0{value:x}h\n')
+
+def writeSingleSegLbl(outfile, name, segment, offset):
+    outfile.write(f' SEGLBL {name.ljust(40) + ', '} SEG_{segment}, G_{segment}, 0{offset:x}h ; Segment {segment}\n')
+
+def makeAsmLabel(prefix, name):
+    # Split on anything that's not A-Z, a-z or 0-9
+    words = re.findall(r"[A-Za-z0-9]+", name)
+
+    # Convert to PascalCase
+    label = "".join(word.capitalize() for word in words)
+
+    if not label: label = "Unnamed"
+
+    return prefix + '_' + label
+
+
+def writeMenuDataToIncludeFile (outfile, menus: list[award45x_ida.MenuInfo]):
+    writeSingleSegLbl(outfile, 'BIOS_SysBiosMenuTablePtr', 15, 0xf85d)
+    writeSingleSegLbl(outfile, 'BIOS_SysBiosMenuTable', 15, menus[0].sysBiosEntry_ptr & 0xffff)
+    writeSingleEquate(outfile, 'BIOS_SysBiosMenuEntries', len(menus))
+
+
+    for i in range(1, len(menus)):
+        currentMenu = menus[i]
+
+        if currentMenu.title.strip() == '': continue
+        exportLabel = makeAsmLabel('Menu', currentMenu.title)
+        writeSingleSegLbl(outfile, exportLabel, 15, currentMenu.sysBiosEntry_ptr & 0xffff)
+
+    for menu in menus:
+        # Check for IDE Configuration menu entries
+        for item in menu.items:
+            a = item.name
+            o = item.ea & 0xffff
+            if      a.startswith("Drive C") or a.startswith("Primary Master"):
+                writeSingleSegLbl(outfile, "Menuitem_HDD_C", 15, o)
+            elif    a.startswith("Drive D") or a.startswith("Primary Slave"):
+                writeSingleSegLbl(outfile, "Menuitem_HDD_D", 15, o)
+            elif    a.startswith("Secondary Master"):
+                writeSingleEquate(outfile, "BIOS_SupportsDualChannel", 1)
+                writeSingleSegLbl(outfile, "Menuitem_HDD_E", 15, o)
+            elif    a.startswith("Secondary Slave"):
+                writeSingleSegLbl(outfile, "Menuitem_HDD_F", 15, o)
+            
+
 def findFuncs_IDA():
 
     data = bytearray(ida_bytes.get_bytes(0, 0xFFFFF))
@@ -1277,6 +1362,8 @@ def findFuncs_IDA():
     foundStructs, foundStructConsts = findPatterns(data, COMMON_STRUCT_LIST)
     
     foundData = readGenericData(data, DATA_GenericStructures)
+
+    foundMenus = award45x_ida.parseMenuFromScratch()
 
     print(foundFuncs)
     print(foundFuncConsts)
@@ -1295,6 +1382,7 @@ def findFuncs_IDA():
 
         writeConstantsToIncludeFile(asmInclude,  foundFuncConsts)
         writeConstantsToIncludeFile(asmInclude,  foundStructConsts)
+        writeMenuDataToIncludeFile (asmInclude,  foundMenus)
         
         asmInclude.write('\n\n; COMMON BIOS FUNCTIONS \n\n')
 
@@ -1329,4 +1417,8 @@ def findFuncs_IDA():
                 raise Exception(f"Couldn't rename function {funcName} in IDA")
 
 
+
+# freaking python
+
+importlib.reload(award45x_ida)
 findFuncs_IDA()
