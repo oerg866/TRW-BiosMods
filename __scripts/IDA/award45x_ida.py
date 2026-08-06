@@ -132,21 +132,49 @@ def getWord(ea=here()):
     word = get_wide_word(here())
     return word
 
-def createStructForce(ea, size, strname):
-    strid = ida_struct.get_struc_id(strname)
+# OLD IDA 8.x CODE
+# def createStructForce(ea, size, strname):
+#     strid = ida_struct.get_struc_id(strname)
+# 
+#     if size == -1:
+#         size = ida_struct.get_struc_size(strid)
+# 
+#     return ida_bytes.create_struct(ea, size, strid, True)
+# 
+# def createWordForce(ea):
+#     return ida_bytes.create_word(ea, 2, True)
+# 
+# def sizeofStruct(strname):
+#     strid = ida_struct.get_struc_id(strname)
+#     return ida_struct.get_struc_size(strid)
+#     
+
+def getStructId(name):
+    tif = ida_typeinf.tinfo_t()
+    if not tif.get_named_type(None, name):
+        raise RuntimeError(f"Structure '{name}' not found")
+
+    return tif.get_tid()
+
+
+def sizeofStruct(name):
+    tif = ida_typeinf.tinfo_t()
+    if not tif.get_named_type(None, name):
+        raise RuntimeError(f"Structure '{name}' not found")
+
+    return tif.get_size()
+
+
+def createStructForce(ea, size, name):
+    tid = getStructId(name)
 
     if size == -1:
-        size = ida_struct.get_struc_size(strid)
+        size = sizeofStruct(name)
 
-    return ida_bytes.create_struct(ea, size, strid, True)
+    return ida_bytes.create_struct(ea, size, tid, True)
 
 def createWordForce(ea):
     return ida_bytes.create_word(ea, 2, True)
-
-def sizeofStruct(strname):
-    strid = ida_struct.get_struc_id(strname)
-    return ida_struct.get_struc_size(strid)
-    
 
 def absoluteOffset(offset):
     return 0xF0000 + offset
