@@ -334,7 +334,7 @@ Int15h_C2_EnableDisableMouse:
     mov al, Cmd_EnableData
     or bh, bh
     ;; BH 1 = enable --> skip setting AL to disable command
-    jz short Int15h_C2_EnableDisableMouse_NotDisable
+    jnz short Int15h_C2_EnableDisableMouse_NotDisable
     inc al ; al is now "disable mouse" command
     ; fallthrough
 
