@@ -30,6 +30,32 @@ Since this is highly experimental, there is no documentation. But if you make it
 
 Recognizes common functions and structures, marks them in IDA and generates an include file named `CMN_FUNC.INC`
 
+## (semi) automated Patching scripts
+
+These include files can be included and will automatically add or patch functionality in the BIOS.
+
+### `nofadeout.inc`
+
+Include this file to disable the EPA logo fadeout, speeding up the POST.
+
+### `nohdtable.inc`
+
+Removes the preset HDD parameter table and modifies the BIOS menu items automatically to relfect this change. It will then only be able to do None, Auto (if the BIOS supports it) and User entry.
+
+This generates a code cave of ~500 bytes.
+
+Update the `CODECAVE_HDDParams` variable after placing code here.
+
+### `hddfix.inc`
+
+Fixes HDD size calculation bugs, if a supported buggy BIOS function is detected.
+
+### `mouse.inc`
+
+Adds PS/2 mouse support to a BIOS that doesn't have it.
+
+This uses lots of space in `CODECAVE_HDDParams` and `CODECAVE_ROMCopyrightß` and updates these variables accordingly.
+
 ## BIOS Mod Documentation
 
 The documentation of AWARD BIOS structures is being written as development progresses and can be found here:
