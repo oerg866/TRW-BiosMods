@@ -3,6 +3,8 @@ import ida_bytes
 import ida_name
 import ida_ua
 import ida_funcs
+import idaapi
+import ida_lines
 import importlib
 
 import award45x_ida
@@ -959,6 +961,69 @@ FUNCTION_CalculateHDDSize_BUGGY1 = (
     []
 )
 
+FUNCTION_SetPaletteEntry = (
+    'SetPaletteEntry',
+    [
+        0x50,               # push    ax
+        0x53,               # push    bx
+        0xb8, 0x07, 0x10,   # mov     ax, 1007h
+        0xcd, 0x10,         # int     10h
+        0x8a, 0xdf,         # mov     bl, bh
+        0x32, 0xff,         # xor     bh, bh
+        0xb8, 0x10, 0x10,   # mov     ax, 1010h
+        0xcd, 0x10,         # int     10h
+        0x5b,               # pop     bx
+        0x58,               # pop     ax
+        0xc3,               # retn
+    ],
+    []
+)
+
+FUNCTION_UnloadEPALogoAndFadeOut = (
+    'UnloadEPALogoAndFadeOut',
+    [
+        0x50,                   # push    ax
+        0x53,                   # push    bx
+        0x51,                   # push    cx
+        0x52,                   # push    dx
+        0x8c, 0xdb,             # mov     bx, ds
+        0x66, 0xc1, 0xe3, 0x10, # shl     ebx, 10h
+        0xb8, 0x00, 0x00,       # mov     ax, 0
+        0x8e, 0xd8,             # mov     ds, ax
+    ],
+    []
+)
+
+FUNCTION_PerformSingleFadeStep = (
+    'PerformSingleFadeStep',
+    [
+        0x84, 0xc2,       # test    al, dl
+        0x74, 0x46,       # jz      short locret_F0CB2
+        0xb3, 0x0e,       # mov     bl, 0Eh
+        0x90,             # nop
+        0x90,             # nop
+        0x80, 0xfa, 0x01, # cmp     dl, 1
+        0x74, 0x04,       # jz      short loc_F0C79
+        0xb3, 0x0a,       # mov     bl, 0Ah
+    ],
+    []
+)
+
+FUNCTION_EPAFadeOutLoop = (
+    'EPAFadeOutLoop',
+    [
+        0x52,                                           # push    dx
+        0xb2, 0x01,                                     # mov     dl, 1
+        0xe8, (REF_RELATIVE, 'PerformSingleFadeStep'),  # call    PerformSingleFadeStep
+        0xb2, 0x10,                                     # mov     dl, 10h
+        0xe8, (REF_RELATIVE, 'PerformSingleFadeStep'),  # call    PerformSingleFadeStep
+        0x5a,                                           # pop     dx
+        0xfe, 0xca,                                     # dec     dl
+        0x74, 0x04,                                     # jz      short loc_F0C15
+    ],
+    []
+)
+
 STRUCT_ColorStyle_Default = (
     'ColorStyle_Default',
     [
@@ -1096,7 +1161,11 @@ COMMON_FUNCTION_LIST = [
     FUNCTION_SetupMouse,
     FUNCTION_SetupMouse_SetIRQ12Handler,
     FUNCTION_DummyToGetHDDTableOffset,
-    FUNCTION_CalculateHDDSize_BUGGY1
+    FUNCTION_CalculateHDDSize_BUGGY1,
+    FUNCTION_SetPaletteEntry,
+    FUNCTION_UnloadEPALogoAndFadeOut,
+    FUNCTION_PerformSingleFadeStep,
+    FUNCTION_EPAFadeOutLoop,
 ]
 
 COMMON_STRUCT_LIST = [
@@ -1415,7 +1484,6 @@ def findFuncs_IDA():
             success = ida_name.set_name(funcLoc, funcName)
             if not success:
                 raise Exception(f"Couldn't rename function {funcName} in IDA")
-
 
 
 # freaking python
