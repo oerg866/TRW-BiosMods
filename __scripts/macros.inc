@@ -19,6 +19,26 @@ POSTCODE MACRO CODE
             pop ax
             ENDM
 
+MESSAGE MACRO MODULE, TEXT
+    ECHO ----------------------------------------
+    ECHO [ MODULE ] TEXT
+    ECHO ----------------------------------------
+    ENDM
+
+PATCH_CODE_START MACRO
+    SEG_15 SEGMENT USE16 PARA PUBLIC 'CODE'
+    ENDM
+
+PATCH_CODE_END MACRO
+    SEG_15 ENDS
+    ENDM
+
+STRINGIFY MACRO arg
+    LOCAL foo
+    foo CATSTR <'>,arg,<'>
+    EXITM foo
+ENDM
+
 IODELAY macro
     jmp short $+2
     jmp short $+2
