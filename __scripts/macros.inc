@@ -169,3 +169,7 @@ RAM_Bios_Hardware       EQU 10h ; 40:10 Installed hardware
 ; Common Code Caves
 CODECAVE_ROMCopyright0 = 0
 CODECAVE_ROMCopyright1 = 0E000h
+
+; Always use 286 except for special instructions
+.286
+.MODEL SMALL
