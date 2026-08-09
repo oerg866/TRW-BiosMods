@@ -301,6 +301,25 @@ COMMON_FUNCTION_LIST = [
         []
     ),
     (
+        'PrintPOSTStrings_Full',
+        [
+            0xe8, None, None,                           # call    nullsub_7
+            0xe8, None, None,                           # call    sub_F2791
+            0xb8, 0x00, 0xf0,                           # mov     ax, 0F000h
+            0x8e, 0xd8,                                 # mov     ds, ax
+            0xe8, None, None,                           # call    sub_F0EE4
+            0xba, None, None,                           # mov     dx, 1800h
+            0xe8, (REF_RELATIVE, 'SetCursorPosition'),  # call    SetCursorPosition
+            0xbe, None, None,                           # mov     si, 0EC71h
+            0xe8, (REF_RELATIVE, 'Display_CS_String'),  # call    Display_CS_String
+            0xba, 0x00, 0x01,                           # mov     dx, 100h
+            0xf6, 0x86, 0x9e, 0x00, 0x01,               # test    byte ptr [bp+9Eh], 1
+        ],
+        [
+            ( 'Str_BiosString', 0x15, CONST_WORD ),
+        ]
+    ),
+    (
         'EarlyChipsetInit',
         [
             0x8C, 0xC8,                             # mov ax, cs
