@@ -123,21 +123,18 @@ CPU_Support_Entry_486 ends
 ; A conditional NEAR JUMP, 386+
 
 _JNZ    macro WHERE
-    .386
-    jnz WHERE
-    .286
+    db 0fh, 085h
+    dw (offset WHERE)-$-2
     endm
 
 _JZ    macro WHERE
-    .386
-    jz WHERE
-    .286
+    db 0fh, 084h
+    dw (offset WHERE)-$-2
     endm
 
 _JA     macro WHERE
-    .386
-    ja WHERE
-    .286
+    db 0fh, 087h
+    dw (offset WHERE)-$-2
     endm
 
 
