@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 @dataclass
 class MenuItemInfo:
     ea: int
+    flags: int
     name_ptr: int
     name: str
     first_option_ptr: int
@@ -204,12 +205,12 @@ def parseMenuItem(ea):
         raise Exception(f'Failed to parse menu item at {hex(ea)}')
 
     item = MenuItemInfo(
-        ea=ea,
-        name_ptr=absoluteOffset(get_wide_word(ea + 2)),
-        name=readAwardString(absoluteOffset(get_wide_word(ea + 2))),
-        first_option_ptr=absoluteOffset(get_wide_word(ea + 11)),
-        help_ptr=absoluteOffset(get_wide_word(ea + 23)),
-
+        ea                  = ea,
+        flags               = get_wide_word(ea),
+        name_ptr            = absoluteOffset(get_wide_word(ea + 2)),
+        name                = readAwardString(absoluteOffset(get_wide_word(ea + 2))),
+        first_option_ptr    = absoluteOffset(get_wide_word(ea + 11)),
+        help_ptr            = absoluteOffset(get_wide_word(ea + 23)),
     )
 
 # This needs some more logic so it doesn't get stuck here...
