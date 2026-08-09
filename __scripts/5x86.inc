@@ -1,6 +1,6 @@
 ; Some code to make it easier to add 5x86 support to AWARD 4.5x BIOSes.
 ; CPU_5X86_FIX_OERG866 must be defined,
-; CPU_5X86_STRING_TABLE_INDEX should be defined
+; CPU_5X86_STRING_TABLE_INDEX must be defined
 
 IFDEF CPU_5X86_FIX_OERG866
 SEGLBL orig_NotX4, SEG_15, G_15, (CalculateBusSpeed+06h)
@@ -44,7 +44,7 @@ IFDEF CPU_5X86_STRING_TABLE_INDEX
     dw CPUSTR_5x86
 
     ORG offset CODECAVE_ROMCopyright1
-CPUSTR_5x86:    db 'AMD 5x86',0
+CPUSTR_5x86:    db 'Am5x86',0
 CODECAVE_ROMCopyright1 = $
 
     PATCH_CODE_END
@@ -63,25 +63,31 @@ AMDCheck5x86:
     ; skip our ammended checks
     jz short AMDCheck5x86_Exit
 
-    cmp ax, 04E0h
+    cmp ax, 04E0h                       ; 4E0 = 5x86 Write Through
+    jnz short AMDCheck5x86_Not5x86_WT
+    mov dh, 030h                        ; 4x multi, Green CPU
+    jmp short AMDCheck5x86_SetID 
+
+AMDCheck5x86_Not5x86_WT:
+    cmp ax, 04F0h                       ; 4F0 = 5x86 Write Back
     jnz short AMDCheck5x86_Exit
-    jmp short AMDCheck5x86_SetID
-    cmp ax, 04F0h
-    jnz short AMDCheck5x86_Exit
+    mov dh, 038h                        ; 4x multi, Green CPU, Write Back
+
 AMDCheck5x86_SetID:
-    mov dh, 038h
     mov dl, ((CPU_5X86_STRING_TABLE_INDEX * 2) OR 081h)
 
 AMDCheck5x86_Exit:
     call CMOS_ApplyCPUFeatureBits
     retn
 
-CODECAVE_ROMCopyright1 = $
+    CODECAVE_ROMCopyright1 = $
 
     ORG (offset FinalizeCPUSetup_IncompleteAMDCheck)+8
     ; instead of CMOS_ApplyCPUFeatureBits
     call AMDCheck5x86
 
     PATCH_CODE_END
+
+ENDIF
 
 ENDIF
