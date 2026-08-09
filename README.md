@@ -7,10 +7,11 @@ Currently, the following motherboards have custom BIOSES:
 
 * 486 Class
     * ABIT PW4 (N/A yet, need to clean up the patches)
-    * SOYO 4SAW
-    * SOYO 4SA2/4SA5
+    * [SOYO 4SAW](./SOYO_4SAW)
+    * [SOYO 4SA2/4SA5](./SOYO_4SA2)
+    * [SOYO SY-025L](./SOYO_025L)
 * Slot 1
-    * Chaintech CT-6SSA2
+    * [Chaintech CT-6SSA2](./CHAINTECH_6SSA2)
 
 ## Script files
 
@@ -56,8 +57,16 @@ Adds PS/2 mouse support to a BIOS that doesn't have it.
 
 This uses lots of space in `CODECAVE_HDDParams` and `CODECAVE_ROMCopyrightß` and updates these variables accordingly.
 
+### `5x86.inc`
+
+Highly work-in-progress method(s) of patching 5x86 support into BIOSes.
+
+Define `CPU_5X86_FIX_OERG866` before including.
+
+You must alsoo define `CPU_5X86_STRING_TABLE_INDEX` which is an index in the CPU String list that points to an "unknown" string which will then be overridden with the 5x86 string.
+
 ## BIOS Mod Documentation
 
 The documentation of AWARD BIOS structures is being written as development progresses and can be found here:
 
-https://hackmd.io/@theretroweb/BkY-LNNeR
+### [AWARD BIOS v4.5x Hacking Notes](wiki/AWARD-4.5x-hacking-notes)
