@@ -549,14 +549,6 @@ Int15h_C2_SetDriverFarCall:
     jmp Int15h_C2_Success
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Update Code Cave location
-CODECAVE_HDDParams = $
-; !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-; We put some of the external helper functions outside the HDD code cave!
-; This is because else that bigass code cave is still not enough...
-    ORG offset CODECAVE_ROMCopyright0
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Disable AOBF IRQ In KBC
 ; cf: 0 = No error, 1 = KBC error 
 DisableAOBFIrq:
@@ -590,6 +582,14 @@ Int15_C2_TryAuxFull_Loop:
     loopz short Int15_C2_TryAuxFull_Loop
     pop cx
     retn
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Update Code Cave location
+CODECAVE_HDDParams = $
+; !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+; We put some of the external helper functions outside the HDD code cave!
+; This is because else that bigass code cave is still not enough...
+    ORG offset CODECAVE_ROMCopyright0
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Wait for AUX Command Response
