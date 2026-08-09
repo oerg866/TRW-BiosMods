@@ -48,7 +48,7 @@ def getConstantFromData(data, offset, type):
 #    ]
 # )
 
-COMMON_STRUCT_LIST = [
+COMMON_FUNCTION_LIST = [
     (
         'Display_String',
         [
