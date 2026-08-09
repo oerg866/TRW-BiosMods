@@ -90,6 +90,20 @@ SEG_LBL ENDS
     ENDM
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; AWARD BIOS Menu stuff
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+ITEM_Disabled EQU 1000b
+
+UNHIDE_OPTION MACRO where
+    PATCH_CODE_START
+
+    ORG offset where
+    dw &where&_FLAGS AND (NOT ITEM_Disabled)
+
+    PATCH_CODE_END
+    ENDM
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; AWARD BIOS String stuff
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
