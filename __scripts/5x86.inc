@@ -45,7 +45,7 @@ IFDEF CPU_5X86_STRING_TABLE_INDEX
 
     ORG offset CODECAVE_ROMCopyright1
 CPUSTR_5x86:    db 'Am5x86',0
-CODECAVE_ROMCopyright1 = $
+    CODECAVE_ROMCopyright1 = $
 
     PATCH_CODE_END
 ENDIF 
