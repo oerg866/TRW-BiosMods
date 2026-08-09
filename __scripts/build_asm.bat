@@ -20,9 +20,9 @@ echo %OUTMAP%
 echo %OUTOBJ%
 
 python ..\__scripts\bin2inc.py %INBIN% %ININC%
-ml /Fm%OUTMAP% /Fl%OUTLST% /c /Zm %INASM% 
+ml /W0 /Fm%OUTMAP% /Fl%OUTLST% /c /Zm %INASM% 
 echo %OUTLST%
-link %OUTOBJ%,tmp.bin;
+link /NOLOGO %OUTOBJ%,tmp.bin;
 
 if not exist tmp.bin (
     echo ERROR
