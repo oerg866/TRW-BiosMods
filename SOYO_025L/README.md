@@ -29,5 +29,7 @@ Based on BIOS Revision **G3** (`03/08/95-SIS-85C471B/E/G-2C4I9S21-00`)
   - CHIPSET FEATURES SETUP / **Memory Relocation**
 - Added PS/2 Mouse capability for use with modified KBC circuit
 - Added 5x86 support
+- Slow EPA Logo fade-out animation removed
+- HDD size display bug corrected
 
 ## Special Thanks to **Jan Steunebrink** for his invaluable help!
