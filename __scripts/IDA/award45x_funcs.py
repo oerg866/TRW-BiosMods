@@ -743,6 +743,21 @@ FUNCTION_CalculateBusSpeed_486 = (
         0xb3, 0x02,             # mov bl, 2
         0xf6, 0xf3,             # div bl
     ],
+    [
+        ( 'CPUClockTable', 0x21, CONST_WORD ),
+    ]
+)
+
+FUNCTION_RoundOffClock = (
+    'RoundOffClock',
+    [
+        0x83, 0xee, 0x03, # sub     si, 3
+        0x83, 0xc6, 0x03, # add     si, 3
+        0x2e, 0x8b, 0x1c, # mov     bx, cs:[si]
+        0x3a, 0xc7,       # cmp     al, bh
+        0x73, 0x02,       # jnb     short locret_F2131
+        0xe2, 0xf4,       # loop    loc_F2125
+    ],
     []
 )
 
@@ -757,11 +772,9 @@ FUNCTION_InitCpuTypeFromTable_486 = (
         0x76, 0x05,             # jbe short ...
     ],
     [
-        ( 'CPUSupportTable', 0x2, CONST_WORD ),        
+        ( 'CPUSupportTable', 0x2, CONST_WORD ),
     ]
 )
-
-
 
 FUNCTION_FixupCPUNameSuffixes_P2P3 = (   # Earlier P2 BIOSes
     'FixupCPUNameSuffixes',
@@ -771,6 +784,18 @@ FUNCTION_FixupCPUNameSuffixes_P2P3 = (   # Earlier P2 BIOSes
         0x3c, 0x70,                     # cmp al, 70h
         0x72, 0x05,                     # jb short <whatever>
         0xb0, 0x49,                     # mov al, 49h ; 'I' <-- this is how they add I to II to make III for P3s LMFAO.
+    ],
+    []
+)
+
+FUNCTION_FinaliseCPUSetup_OpcodeErrorHandler = (
+    'FinaliseCPUSetup_OpcodeErrorHandler',
+    [
+        0x55,                   # push    bp
+        0x8b, 0xec,             # mov     bp, sp
+        0x83, 0x46, 0x02, 0x02, # add     word ptr [bp+2], 2
+        0x5d,                   # pop     bp
+        0xcf,                   # iret
     ],
     []
 )
@@ -816,6 +841,62 @@ FUNCTION_WriteCMOSByte = (
         0xe3, 0x00,                     # jcxz short $+2
         0xe3, 0x00,                     # jcxz short $+2
         0xc3                            # retn
+    ],
+    []
+)
+
+FUNCTION_CMOS_ClearSMIBit = (
+    'CMOS_ClearSMIBit',
+    [
+        0xb4, 0xbf,                             # mov     ah, 0BFh
+        0x8a, 0xc4,                             # mov     al, ah
+        0xe8, (REF_RELATIVE, 'ReadCMOSByte'),   # call    ReadCMOSByte
+        0x24, 0xef,                             # and     al, 0EFh
+        0x86, 0xe0,                             # xchg    ah, al
+        0xe8, (REF_RELATIVE, 'WriteCMOSByte'),  # call    WriteCMOSByte
+        0xc3,                                   # retn
+    ],
+    []
+)
+
+
+FUNCTION_CMOS_IsSMIBitSet = (
+    'CMOS_IsSMIBitSet',
+    [
+        0x50,                                   # push    ax
+        0xb0, 0xbf,                             # mov     al, 0BFh
+        0xe8, (REF_RELATIVE, 'ReadCMOSByte'),   # call    ReadCMOSByte
+        0xa8, 0x10,                             # test    al, 10h
+        0x58,                                   # pop     ax
+        0xc3,                                   # retn
+    ],
+    []
+)
+
+FUNCTION_CMOS_ApplyCPUFeatureBits = (
+    'CMOS_ApplyCPUFeatureBits',
+    [
+        0xb0, 0xbd,                             # mov     al, 0BDh
+        0x8a, 0xe2,                             # mov     ah, dl
+        0xe8, (REF_RELATIVE, 'WriteCMOSByte'),  # call    WriteCMOSByte
+        0xb4, 0xbf,                             # mov     ah, 0BFh
+        0x8a, 0xc4,                             # mov     al, ah
+        0xe8, (REF_RELATIVE, 'ReadCMOSByte'),   # call    ReadCMOSByte
+        0x24, 0x07,                             # and     al, 7
+        0x0A, 0xC6,                             # or      al, dh
+    ],
+    []
+)
+
+# This is a part of the FinalizeCPUFunction's AMD section
+# in BIOSes without 5x86 support, so it ends on 486.
+FUNCTION_FinalizeCPUSetup_IncompleteAMDCheck = (
+    'FinalizeCPUSetup_IncompleteAMDCheck',
+    [
+        0x3d, 0x80, 0x04,                                   # cmp     ax, 480h
+        0x74, 0x03,                                         # jz      short loc_F83AD
+        0xba, None, 0x98,                                   # mov     dx, 98XXh ; <-- ID
+        0xe8, (REF_RELATIVE, 'CMOS_ApplyCPUFeatureBits'),   # call    CMOS_ApplyCPUFeatureBits
     ],
     []
 )
@@ -1146,11 +1227,17 @@ COMMON_FUNCTION_LIST = [
     FUNCTION_GetCPUString_486_V1,
     FUNCTION_GetCPUString_486_V2,
     FUNCTION_CalculateBusSpeed_486,
+    FUNCTION_RoundOffClock,
     FUNCTION_InitCpuTypeFromTable_486,
     FUNCTION_FixupCPUNameSuffixes_P2P3,
+    FUNCTION_FinaliseCPUSetup_OpcodeErrorHandler,
     FUNCTION_ReadCMOSByte_V1,
     FUNCTION_ReadCMOSByte_V2,
     FUNCTION_WriteCMOSByte,
+    FUNCTION_CMOS_ClearSMIBit,
+    FUNCTION_CMOS_IsSMIBitSet,
+    FUNCTION_CMOS_ApplyCPUFeatureBits,
+    FUNCTION_FinalizeCPUSetup_IncompleteAMDCheck,
     FUNCTION_Out_8042,
     FUNCTION_Out_8042_Full,
     FUNCTION_SendCommandToKBC,
