@@ -7,7 +7,7 @@ FAR_JMP     MACRO SEGMENT, OFFSET
             ENDM
 
 FAR_CALL    MACRO SEGMENT, OFFSET
-            DB 090h, 09Ah
+            DB 09Ah
             DW OFFSET
             DW SEGMENT
             ENDM
