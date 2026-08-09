@@ -1415,7 +1415,8 @@ def findFuncs_IDA():
     
     foundData = readGenericData(data, DATA_GenericStructures)
 
-    foundMenus = award45x_ida.parseMenuFromScratch()
+    menuSystem = award45x_ida.parseMenuFromScratch()
+    foundMenus = menuSystem.menus
 
     # print(foundFuncs)
     # print(foundFuncConsts)

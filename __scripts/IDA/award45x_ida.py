@@ -13,7 +13,8 @@ class MenuItemInfo:
     name: str
     first_option_ptr: int
     help_ptr: int
-
+    cmosLoc: int
+    cmosMask: int
 
 @dataclass
 class MenuInfo:
@@ -23,6 +24,11 @@ class MenuInfo:
     startup_string: int
     title: str = ""
     items: list[MenuItemInfo] = field(default_factory=list)
+
+@dataclass
+class MenuSystem:
+    menus: list[MenuInfo] = field(default_factory=list)
+    cmosMap: dict = field(default_factory=dict)
 
 CtrlCharStructNames = {
     0 : 'S_TextCtrl',
@@ -57,11 +63,11 @@ def getNextItemAddr(ea=here()):
     return get_item_end(ea)
 
 def processStringShowCode(ea=here()):
-    print(f'processStringShowCode {hex(ea)}')
+    #print(f'processStringShowCode {hex(ea)}')
     #return parseAwardString(ea + 3)
 
     offset = get_wide_word(ea + 3)
-    print(f'new offset {offset}')
+    #print(f'new offset {offset}')
     parseAwardString(absoluteOffset(offset))
 
 def interpretWordAsCodeOffsetAndMakeCode(ea):
@@ -82,26 +88,26 @@ def parseAwardString(ea):
     if (ea & 0xffff) == 0 or (ea & 0xffff) == 0xffff:
         return True
     
-    print(f'parseAwardString {hex(ea)}')
+    #print(f'parseAwardString {hex(ea)}')
 
     while (True):
         curbyte = get_wide_byte(ea)
-        print (hex(curbyte))
+        #print (hex(curbyte))
 
         if (curbyte == 0):
             # do nothing
-            print('V_DONE')
+            #print('V_DONE')
             break
         elif (curbyte == 1):
             # do nothing
-            print('V_DONE1')
+            #print('V_DONE1')
             break
         elif (curbyte >= 18) :
             # CP437 text
             cleanupAscii(ea)
 
             if create_strlit(ea, BADADDR) == True:
-                print('true')
+                #print('true')
                 ea = getNextItemAddr(ea) - 1
                 peek = get_wide_byte(ea)
                 if (peek == 0) or (peek == 1):
@@ -130,7 +136,7 @@ def parseAwardString(ea):
 
 def parseAwardMenuCallbacks(ea):
 
-    print(f'parseAwardMenuCallbacks = {hex(ea)}')
+    #print(f'parseAwardMenuCallbacks = {hex(ea)}')
     if (createWordForce(ea) == False):
         print('Cant create word :(')
 
@@ -138,10 +144,10 @@ def parseAwardMenuCallbacks(ea):
 
     ea = getNextItemAddr(ea)
 
-    print(f'Menu callback count: {count}')
+    #print(f'Menu callback count: {count}')
     for i in range(0, count):
         if createStructForce(ea, -1, 'MenuItemCallback') == False:
-            print('Error')
+            #print('Error')
             return False
         
         interpretWordAsCodeOffsetAndMakeCode(ea + 2)
@@ -211,6 +217,8 @@ def parseMenuItem(ea):
         name                = readAwardString(absoluteOffset(get_wide_word(ea + 2))),
         first_option_ptr    = absoluteOffset(get_wide_word(ea + 11)),
         help_ptr            = absoluteOffset(get_wide_word(ea + 23)),
+        cmosLoc             = get_byte(ea + 8),
+        cmosMask            = get_wide_word(ea + 9),
     )
 
 # This needs some more logic so it doesn't get stuck here...
@@ -244,7 +252,7 @@ def readAwardString(ea, stop_on_01=True):
 
     return data.decode("cp437", errors="replace")
 
-def parseMenuFromScratch() -> list[MenuInfo]:
+def parseMenuFromScratch() -> MenuSystem:
     print(f'Parsing menu...')
     
     print(f'here: {hex(here())}')
@@ -266,10 +274,10 @@ def parseMenuFromScratch() -> list[MenuInfo]:
             break
 
         # Push these params to top menu item tuple list
-        print(f'{hex(get_wide_word(offset + 0))}')
-        print(f'{hex(get_wide_word(offset + 2))}')
-        print(f'{hex(get_wide_word(offset + 4))}')
-        print(f'---------------------------')
+        #print(f'{hex(get_wide_word(offset + 0))}')
+        #print(f'{hex(get_wide_word(offset + 2))}')
+        #print(f'{hex(get_wide_word(offset + 4))}')
+        #print(f'---------------------------')
         toAdd = [offset, get_wide_word(offset), get_wide_word(offset+2), get_wide_word(offset+4)]
         topMenusItemTuples.append(toAdd)
 
@@ -299,7 +307,7 @@ def parseMenuFromScratch() -> list[MenuInfo]:
 
         itemCount = int((endPtr - startPtr) / sizeofStruct('MenuItem'))
 
-        print(f'itemCount = {itemCount}')
+        #print(f'itemCount = {itemCount}')
 
         parseAwardString(menu.startup_string)
 
@@ -319,6 +327,7 @@ def parseMenuFromScratch() -> list[MenuInfo]:
 
         count += 1
         menus.append(menu)
+
 
     # Now parse all the Menu Callbacks
     offset += 2
@@ -345,8 +354,118 @@ def parseMenuFromScratch() -> list[MenuInfo]:
 
         offset = getNextItemAddr(offset)
 
-    print("donezo schmonezo")
-    return menus
+    print("CMOS List")
+
+    cmosUsed = {}
+    cmosTuplesToCheck = []
+
+    for i in range(1, len(menus)):
+        menu = menus[i]
+        for item in menu.items:
+            cmosTuplesToCheck.append( (item.cmosLoc, item.cmosMask & 0xFF) )
+
+            if (item.cmosMask > 0xFF):
+                cmosTuplesToCheck.append( (item.cmosLoc + 1, item.cmosMask >> 8) )
+
+    for loc, mask in cmosTuplesToCheck:
+
+        if loc > 0x7F:
+            # This is a memory item, not a cmos storage item
+            continue
+
+        if loc in cmosUsed:
+            previousMask = cmosUsed[loc]
+
+            overlappingBits = previousMask & mask
+            if overlappingBits:
+                print(
+                    f"WARNING: CMOS {loc:02X}: "
+                    f"bits already used: {overlappingBits:02X}, "
+                    f"new mask: {mask:02X}, "
+                    f"previous mask: {previousMask:02X}"
+                )
+
+            cmosUsed[loc] |= mask
+        else:
+            cmosUsed[loc] = mask
+
+    #######################################
+    # Add some known locations 
+
+    cmosUsed[0x00] = 0xFF # RTC seconds
+    cmosUsed[0x01] = 0xFF # RTA seconds
+    cmosUsed[0x02] = 0xFF # RTC minutes
+    cmosUsed[0x03] = 0xFF # RTA minutes
+    cmosUsed[0x04] = 0xFF # RTC hours
+    cmosUsed[0x05] = 0xFF # RTA hours
+    cmosUsed[0x06] = 0xFF # Day of week
+    cmosUsed[0x07] = 0xFF # Day of month
+    cmosUsed[0x08] = 0xFF # Month
+    cmosUsed[0x09] = 0xFF # Year 
+    cmosUsed[0x0D] = 0xFF # ?
+    cmosUsed[0x0E] = 0xFF # Status (memory, keyboard, checksum, equipment)
+    cmosUsed[0x0F] = 0xFF # ACPI shutdown
+    cmosUsed[0x10] = 0xFF # Floppy type
+    cmosUsed[0x11] = 0xFF # General BIOS settings (block mode, a20, numlock)
+    cmosUsed[0x12] = 0xFF # C/D Drive present
+    cmosUsed[0x13] = 0xFF # General BIOS Settings (floppy seek, typematic)
+    cmosUsed[0x14] = 0xFF # installed equipment
+    cmosUsed[0x15] = 0xFF # Base Memory 1
+    cmosUsed[0x16] = 0xFF # Base Memory 2
+    cmosUsed[0x17] = 0xFF # Extended memory 1
+    cmosUsed[0x18] = 0xFF # Extended memory 2
+    cmosUsed[0x19] = 0xFF # Drive C type
+    cmosUsed[0x1A] = 0xFF # Drive D type
+    cmosUsed[0x1C] = 0xFF # Password
+    cmosUsed[0x2E] = 0xFF # Checksum 1
+    cmosUsed[0x2F] = 0xFF # Checksum 2
+    cmosUsed[0x30] = 0xFF # Extended memory 1 (not sure what the difference is)
+    cmosUsed[0x31] = 0xFF # Extended memory 2 (not sure what the difference is)
+    cmosUsed[0x32] = 0xFF # Century
+    cmosUsed[0x33] = 0xFF # ?
+    cmosUsed[0x37] = 0xFF # ?
+    cmosUsed[0x38] = 0xFF # EMS Size
+    cmosUsed[0x39] = 0xFF # EMS I/O Address
+    cmosUsed[0x3A] = 0xFF # EMS Page offset
+    cmosUsed[0x3B] = 0xFF # Cache control
+    cmosUsed[0x3C] = 0xFF # General BIOS settings (DRAM > 64MB OS, no fdd for win95)
+    cmosUsed[0x3D] = 0xFF # CPU type index
+    cmosUsed[0x3E] = 0xFF # General BIOS settings (Halt on, swap floppy drive)
+    cmosUsed[0x3F] = 0xFF # CPU feature flags
+
+    # Drive 48 params
+    for i in range (0x1E, 0x26): cmosUsed[i] = 0xFF
+    # Drive 49 params
+    for i in range (0x26, 0x2E): cmosUsed[i] = 0xFF
+    # Drive 50 params
+    for i in range (0x68, 0x6F): cmosUsed[i] = 0xFF
+    # Drive 41 params
+    for i in range (0x71, 0x79): cmosUsed[i] = 0xFF
+
+    cmosUsed[0x67] = 0xFF # Drive E type
+    cmosUsed[0x70] = 0xFF # Drive F type
+    cmosUsed[0x79] = 0xFF # Drives C-F Access mode (Normal/LBA/Large)
+
+
+    ######################################
+    # Print CMOS bit mask
+
+    for loc in range(0, 0x80):
+        mask = 0
+
+        if loc in cmosUsed: 
+            mask = cmosUsed[loc] 
+
+        usedStr = ''
+        for i in range(0, 8):
+            if mask & 1:    usedStr = 'X' + usedStr
+            else:           usedStr = '.' + usedStr
+            mask >>= 1
+
+        print(f'{loc:02X}, {usedStr}')
+
+    menuSystem = MenuSystem(menus, cmosUsed)
+    return menuSystem
 
 # menus = parseMenuFromScratch()
 # 
