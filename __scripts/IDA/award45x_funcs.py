@@ -1327,6 +1327,28 @@ def makeAsmLabel(prefix, name):
     return prefix + '_' + label
 
 
+def sanitizeAwardString(input):
+    ret = ''
+    for i in range(0, len(input)):
+        c = ord(input[i])
+        if   c <= 0x01: break
+        elif c == 0x02: i += 5
+        elif c == 0x03: i += 4
+        elif c == 0x04: i += 4
+        elif c == 0x05: i += 2
+        elif c >= 0x06 and c <= 0x0b: continue
+        elif c >= 0x0c and c <= 0x0f: i += 1
+        elif c == 0x10: i += 2
+        elif input[i] == ':': continue
+        elif c >= 0x20: ret += chr(c)
+#        elif input[i] >= '0' and input[i] <= '9': ret += chr(c)
+#        elif input[i] >= 'A' and input[i] <= 'Z': ret += chr(c)
+#        elif input[i] >= 'a' and input[i] <= 'z': ret += chr(c)
+        else: continue
+
+    return ret.strip()
+
+
 def writeMenuDataToIncludeFile (outfile, menus: list[award45x_ida.MenuInfo]):
     writeSingleSegLbl(outfile, 'BIOS_SysBiosMenuTablePtr', 15, 0xf85d)
     writeSingleSegLbl(outfile, 'BIOS_SysBiosMenuTable', 15, menus[0].sysBiosEntry_ptr & 0xffff)
@@ -1340,11 +1362,13 @@ def writeMenuDataToIncludeFile (outfile, menus: list[award45x_ida.MenuInfo]):
         exportLabel = makeAsmLabel('Menu', currentMenu.title)
         writeSingleSegLbl(outfile, exportLabel, 15, currentMenu.sysBiosEntry_ptr & 0xffff)
 
+    # Write our data for menu items to the include file
     for menu in menus:
-        # Check for IDE Configuration menu entries
         for item in menu.items:
-            a = item.name
+            a = sanitizeAwardString(item.name)
             o = item.ea & 0xffff
+
+            # Special case for HDD Preset disable mod: C/D/E/F config option
             if      a.startswith("Drive C") or a.startswith("Primary Master"):
                 writeSingleSegLbl(outfile, "Menuitem_HDD_C", 15, o)
             elif    a.startswith("Drive D") or a.startswith("Primary Slave"):
@@ -1354,7 +1378,14 @@ def writeMenuDataToIncludeFile (outfile, menus: list[award45x_ida.MenuInfo]):
                 writeSingleSegLbl(outfile, "Menuitem_HDD_E", 15, o)
             elif    a.startswith("Secondary Slave"):
                 writeSingleSegLbl(outfile, "Menuitem_HDD_F", 15, o)
-            
+
+            # Export symbols for all HIDDEN options
+            if item.flags & 0b1000:
+                print(f'Hidden menu item @ {item.ea:02X}: {menu.title} / {a}')
+                outfile.write(f'; HIDDEN Menu item {menu.title} / {a}\n')
+                exportLabel = makeAsmLabel("Menuitem_HIDDEN", a)
+                writeSingleEquate(outfile, f'{exportLabel}_FLAGS', item.flags)
+                writeSingleSegLbl(outfile, exportLabel, 15, o)
 
 def findFuncs_IDA():
 
@@ -1384,7 +1415,6 @@ def findFuncs_IDA():
 
         writeConstantsToIncludeFile(asmInclude,  foundFuncConsts)
         writeConstantsToIncludeFile(asmInclude,  foundStructConsts)
-        writeMenuDataToIncludeFile (asmInclude,  foundMenus)
         
         asmInclude.write('\n\n; COMMON BIOS FUNCTIONS \n\n')
 
@@ -1393,6 +1423,11 @@ def findFuncs_IDA():
         asmInclude.write(f'\n\n; COMMON BIOS STRUCTURES \n\n')
 
         writeMatchedLabelsToIncludeFile(len(data), asmInclude, foundStructs)
+
+        asmInclude.write(f'\n\n; MENU DATA \n\n')
+
+        writeMenuDataToIncludeFile (asmInclude,  foundMenus)
+
 
         for funcName, funcLoc in foundFuncs:
 
