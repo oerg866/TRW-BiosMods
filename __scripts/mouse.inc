@@ -94,8 +94,46 @@ IRQ12_New:
     ja IRQ12_DoFarCall
     ; If not, set new Count Index
     or ds:Mouse_CountIndex, bl
+    
     ; Check data packet
-    call Mouse_CheckDataPacket
+    ; !!! This used to be a separate function, but this is the only caller
+    ; !!! and older BIOSes infact had this inline, so we save 4 bytes.
+Mouse_CheckDataPacket:
+    ; Loop count
+    mov cx, 5*33
+Mouse_CheckDataPacket_Loop:
+    in al, 64h
+    IODELAY
+    sti
+    ; TODO - Check what status code is being checked here
+    ; Is KBC ready?
+    and al, 21h
+    cmp al, 21h ; '!'
+    jz short Mouse_CheckDataPacket_End
+    push cx
+    push bx
+    mov cx, 1
+    xor bx, bx
+    call Wait_Refresh
+    pop bx
+    pop cx
+    loop Mouse_CheckDataPacket_Loop
+
+    and byte ptr ds:Mouse_CountIndex, 0f8h
+    push ds
+    pop es
+    assume es:nothing
+    cld
+
+; Clear aux data buffer
+    mov di, offset Mouse_AuxData
+    xor ax, ax
+    stosw
+    stosw
+    stosw
+    stosw
+
+Mouse_CheckDataPacket_End:
     ; End the interrupt
     jmp short IRQ12_Exit
 
@@ -156,44 +194,6 @@ IRQ12_Exit:
 ;;    pop ax
     popa
     iret
-
-Mouse_CheckDataPacket:
-    ; Loop count
-    mov cx, 5*33
-Mouse_CheckDataPacket_Loop:
-    in al, 64h
-    IODELAY
-    sti
-    ; TODO - Check what status code is being checked here
-    ; Is KBC ready?
-    and al, 21h
-    cmp al, 21h ; '!'
-    jz short Mouse_CheckDataPacket_End
-    push cx
-    push bx
-    mov cx, 1
-    xor bx, bx
-    call Wait_Refresh
-    pop bx
-    pop cx
-    loop Mouse_CheckDataPacket_Loop
-
-    and byte ptr ds:Mouse_CountIndex, 0f8h
-    push ds
-    pop es
-    assume es:nothing
-    cld
-
-; Clear aux data buffer
-    mov di, offset Mouse_AuxData
-    xor ax, ax
-    stosw
-    stosw
-    stosw
-    stosw
-
-Mouse_CheckDataPacket_End:
-    retn
 
 GetXBDASegmentIntoDS:
     push Bios_RAM_Segment
