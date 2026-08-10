@@ -738,11 +738,11 @@ CODECAVE_ROMCopyright0 = $
 ; Bend Int15 handler to call our MouseFunction...function for C1/C2
     org offset Int15_CheckMouse
     cmp ah, 0C1h
-    jnz NoC1
+    _JNZ NoC1
     jmp Int15h_MouseFunction
 NoC1:
     cmp ah, 0C2h
-    jnz NoC2
+    _JNZ NoC2
     jmp Int15h_MouseFunction
 NoC2:
 Int15h_ContinueProcessing:
