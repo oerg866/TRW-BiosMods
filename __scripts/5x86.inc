@@ -51,6 +51,20 @@ CPUSTR_5x86:    db 'Am5x86',0
 ENDIF 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; In case the BIOS has a buggy option to disable Internal Cache WB/WT setting
+IFDEF MenuChipsetSetup_CMOSIsWBCPU_Buggy
+    MESSAGE 5x86, 'Fixing menu option hiding'
+    PATCH_CODE_START
+    ORG offset MenuChipsetSetup_CMOSIsWBCPU_Buggy
+    mov al, 0BFh
+    call ReadCMOSByte
+    and al, 08h
+    cmp al, 08h
+    retn
+    PATCH_CODE_END
+ENDIF
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; In case an incomplete extended AMD CPU check exists, update it
 
 IFDEF FinalizeCPUSetup_IncompleteAMDCheck

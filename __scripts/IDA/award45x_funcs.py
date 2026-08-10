@@ -781,6 +781,20 @@ COMMON_FUNCTION_LIST = [
         []
     ),
     (
+        # Variant 2.5, this exists in parallel to the other ones wtf
+        'ReadCMOSByte_2',
+        [
+            0xe6, 0x70, # out     70h, al
+            0xeb, 0x00, # jmp     short $+2
+            0xeb, 0x00, # jmp     short $+2
+            0xe4, 0x71, # in      al, 71h
+            0xeb, 0x00, # jmp     short $+2
+            0xeb, 0x00, # jmp     short $+2
+            0xc3,       # retn
+        ],
+        []
+    ),
+    (
         'WriteCMOSByte',
         [
             0x90,                           # nop
@@ -843,6 +857,27 @@ COMMON_FUNCTION_LIST = [
             0x74, 0x03,                                         # jz      short loc_F83AD
             0xba, None, 0x98,                                   # mov     dx, 98XXh ; <-- ID
             0xe8, (REF_RELATIVE, 'CMOS_ApplyCPUFeatureBits'),   # call    CMOS_ApplyCPUFeatureBits
+        ],
+        []
+    ),
+    (
+        # This is a callback in the menu system that will hide the "Internal Cache WB/W" setting
+        # if a non-WB CPU is  installed. This is not 5x86 aware, so we mark it BUGGY.
+        'MenuChipsetSetup_CMOSIsWBCPU_Buggy',
+        [
+            0xb0, 0xbd,                             # mov     al, 0BDh
+            0xe8,(REF_RELATIVE, 'ReadCMOSByte_2'),  # call    ReadCMOSByte_2
+            0x24, 0x7e,                             # and     al, 7Eh
+            0x90,                                   # nop
+            0x90,                                   # nop
+            0x3c, 0x24,                             # cmp     al, 24h
+            0x74, 0x0a,                             # jz      short locret_F8EAB
+            0x3c, 0x26,                             # cmp     al, 26h
+            0x74, 0x06,                             # jz      short locret_F8EAB
+            0x3c, 0x16,                             # cmp     al, 16h
+            0x74, 0x02,                             # jz      short locret_F8EAB
+            0x3c, 0x18,                             # cmp     al, 18h
+            0xc3,                                   # retn
         ],
         []
     ),
@@ -1048,7 +1083,22 @@ COMMON_FUNCTION_LIST = [
             0x74, 0x04,                                     # jz      short loc_F0C15
         ],
         []
-    )
+    ),
+    (
+        'DisableMenuItem',
+        [
+            0xff, 0xb6, 0x81, 0x00,       # push    word ptr [bp+81h]
+            0x50,                         # push    ax
+            0x51,                         # push    cx
+            0xe8, None, None,             # call    sub_F3936
+            0x0d, 0x08, 0x00,             # or      ax, 8
+            0xe8, None, None,             # call    sub_F395C
+            0xb4, 0x01,                   # mov     ah, 1
+            0xb9, 0x26, 0x00,             # mov     cx, 26h
+            0x80, 0xbe, 0x81, 0x00, 0x28, # cmp     byte ptr [bp+81h], 28h
+        ],
+        []
+    ),
 ]
 
 STRUCT_ColorStyle_Default = (
