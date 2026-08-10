@@ -1,4 +1,4 @@
-Microsoft (R) Macro Assembler Version 6.14.8444		    08/10/26 01:05:33
+Microsoft (R) Macro Assembler Version 6.14.8444		    08/10/26 06:13:38
 patch.asm						     Page 1 - 1
 
 
@@ -25,9 +25,9 @@ patch.asm						     Page 1 - 1
 			      C             ENDM
 			      C 
 			      C MESSAGE MACRO MODULE, TEXT
-			      C     ECHO ----------------------------------------
+			      C ;    ECHO ----------------------------------------
 			      C     ECHO [ MODULE ] TEXT
-			      C     ECHO ----------------------------------------
+			      C ;    ECHO ----------------------------------------
 			      C     ENDM
 			      C 
 			      C PATCH_CODE_START MACRO
@@ -16726,8 +16726,12 @@ patch.asm						     Page 1 - 1
  8426			     1C SEG_15 SEGMENT USE16 PARA PUBLIC 'CODE'
  E98A			     1C ReadCMOSByte:
  E98A			     1C SEG_15 ENDS
-			      C  SEGLBL WriteCMOSByte,                           SEG_15, G_15, 0e99bh ; Segment 15
+			      C  SEGLBL ReadCMOSByte_2,                          SEG_15, G_15, 09a26h ; Segment 15
  E98A			     1C SEG_15 SEGMENT USE16 PARA PUBLIC 'CODE'
+ 9A26			     1C ReadCMOSByte_2:
+ 9A26			     1C SEG_15 ENDS
+			      C  SEGLBL WriteCMOSByte,                           SEG_15, G_15, 0e99bh ; Segment 15
+ 9A26			     1C SEG_15 SEGMENT USE16 PARA PUBLIC 'CODE'
  E99B			     1C WriteCMOSByte:
  E99B			     1C SEG_15 ENDS
 			      C  SEGLBL CMOS_ClearSMIBit,                        SEG_15, G_15, 0844ch ; Segment 15
@@ -16746,8 +16750,12 @@ patch.asm						     Page 1 - 1
  8465			     1C SEG_15 SEGMENT USE16 PARA PUBLIC 'CODE'
  83A5			     1C FinalizeCPUSetup_IncompleteAMDCheck:
  83A5			     1C SEG_15 ENDS
-			      C  SEGLBL Out_8042,                                SEG_15, G_15, 0ca3ch ; Segment 15
+			      C  SEGLBL MenuChipsetSetup_CMOSIsWBCPU_Buggy,      SEG_15, G_15, 08e94h ; Segment 15
  83A5			     1C SEG_15 SEGMENT USE16 PARA PUBLIC 'CODE'
+ 8E94			     1C MenuChipsetSetup_CMOSIsWBCPU_Buggy:
+ 8E94			     1C SEG_15 ENDS
+			      C  SEGLBL Out_8042,                                SEG_15, G_15, 0ca3ch ; Segment 15
+ 8E94			     1C SEG_15 SEGMENT USE16 PARA PUBLIC 'CODE'
  CA3C			     1C Out_8042:
  CA3C			     1C SEG_15 ENDS
 			      C  SEGLBL Out_8042_Full,                           SEG_15, G_15, 0ca50h ; Segment 15
@@ -16798,12 +16806,16 @@ patch.asm						     Page 1 - 1
  0C68			     1C SEG_15 SEGMENT USE16 PARA PUBLIC 'CODE'
  0C01			     1C EPAFadeOutLoop:
  0C01			     1C SEG_15 ENDS
+			      C  SEGLBL DisableMenuItem,                         SEG_15, G_15, 03db8h ; Segment 15
+ 0C01			     1C SEG_15 SEGMENT USE16 PARA PUBLIC 'CODE'
+ 3DB8			     1C DisableMenuItem:
+ 3DB8			     1C SEG_15 ENDS
 			      C 
 			      C 
 			      C ; COMMON BIOS STRUCTURES 
 			      C 
 			      C  SEGLBL ColorStyle_Default,                      SEG_15, G_15, 0284bh ; Segment 15
- 0C01			     1C SEG_15 SEGMENT USE16 PARA PUBLIC 'CODE'
+ 3DB8			     1C SEG_15 SEGMENT USE16 PARA PUBLIC 'CODE'
  284B			     1C ColorStyle_Default:
  284B			     1C SEG_15 ENDS
 			      C  SEGLBL ColorStyle_ContainsGreen,                SEG_15, G_15, 02887h ; Segment 15
@@ -17099,7 +17111,12 @@ patch.asm						     Page 1 - 1
 			      C ; Results in a free ~500 byte code cave.
 			      C ; (C) 2026 Eric Voirin
 			      C 
- 6413			      C SEG_15 SEGMENT USE16 PARA PUBLIC 'CODE'
+			      C 
+			      C     MESSAGE NOHDTABLE, 'Removing HDD Preset Table'
+			      C 
+			      C     PATCH_CODE_START
+ 6413			     1C     SEG_15 SEGMENT USE16 PARA PUBLIC 'CODE'
+			      C 
 			      C ; We put the strings for the menu override here
 			      C     ORG offset HDD_PresetTable
 			      C 
@@ -17148,6 +17165,8 @@ patch.asm						     Page 1 - 1
  E474  01		      C             db 1
 			      C 
 			      C IFDEF BIOS_SupportsDualChannel
+			      C 
+			      C     MESSAGE NOHDTABLE, 'This BIOS supports dual IDE channels.'
 			      C 
  E475 4E 6F 6E 65 00	      C HDDE_Items  db STR_None, 0
  E47A  002F [		      C             db PRESET_COUNT dup (1)
@@ -17200,7 +17219,9 @@ patch.asm						     Page 1 - 1
  4D0C  0000		     1C     dw 0000000000000b   ; Remove key-in and number showing support
  4D17  E4B1 R		     1C     dw offset HDDF_Items  ; Point string item selection to the table we made
 			      C ENDIF
- 4D19			      C SEG_15 ENDS
+			      C 
+			      C     PATCH_CODE_END
+ 4D19			     1C     SEG_15 ENDS
 			      C 
 
 				    ; Add PS2 Mouse Support
@@ -17263,6 +17284,8 @@ patch.asm						     Page 1 - 1
  = byte ptr [bp+0ch]	      C Int15h_C2_BP_cl             EQU byte ptr [bp+0ch] ; cl
  = byte ptr [bp+0ah]	      C Int15h_C2_BP_dl             EQU byte ptr [bp+0ah] ; dl
 			      C 
+			      C 
+			      C     MESSAGE MOUSE, 'Adding PS/2 Support'
 			      C 
  4D19			      C SEG_15 SEGMENT USE16 PARA PUBLIC 'CODE'
 			      C 
@@ -17434,7 +17457,7 @@ patch.asm						     Page 1 - 1
 			      C     ; Mouse not present, go back to int15 main path
 			      C     _JZ Int15h_ContinueProcessing
  E5A0  0F 84		     1C     db 0fh, 084h
- E5A2  F39D		     1C     dw (offset Int15h_ContinueProcessing)-$-2
+ E5A2  F3A1		     1C     dw (offset Int15h_ContinueProcessing)-$-2
 			      C 
  E5A4			      C Int15h_MousePresent:
 			      C 
@@ -17959,14 +17982,18 @@ patch.asm						     Page 1 - 1
 			      C ; Bend Int15 handler to call our MouseFunction...function for C1/C2
 			      C     org offset Int15_CheckMouse
  D931  80 FC C1		      C     cmp ah, 0C1h
- D934  75 03		      C     jnz NoC1
- D936  E9 0C5C		      C     jmp Int15h_MouseFunction
- D939			      C NoC1:
- D939  80 FC C2		      C     cmp ah, 0C2h
- D93C  75 03		      C     jnz NoC2
- D93E  E9 0C54		      C     jmp Int15h_MouseFunction
- D941			      C NoC2:
- D941			      C Int15h_ContinueProcessing:
+			      C     _JNZ NoC1
+ D934  0F 85		     1C     db 0fh, 085h
+ D936  0003		     1C     dw (offset NoC1)-$-2
+ D938  E9 0C5A		      C     jmp Int15h_MouseFunction
+ D93B			      C NoC1:
+ D93B  80 FC C2		      C     cmp ah, 0C2h
+			      C     _JNZ NoC2
+ D93E  0F 85		     1C     db 0fh, 085h
+ D940  0003		     1C     dw (offset NoC2)-$-2
+ D942  E9 0C50		      C     jmp Int15h_MouseFunction
+ D945			      C NoC2:
+ D945			      C Int15h_ContinueProcessing:
 			      C 
 			      C ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 			      C ; Set new IRQ12 Address
@@ -17987,12 +18014,13 @@ patch.asm						     Page 1 - 1
 				    include ..\__scripts\nofadeout.inc
 			      C ; Include this file to disable EPA Logo fadeout
 			      C 
- FFED			      C SEG_15 SEGMENT USE16 PARA PUBLIC 'CODE'
-			      C 
+			      C     MESSAGE NOFADEOUT, 'Removing EPA Logo Fadeout'
+			      C     PATCH_CODE_START
+ FFED			     1C     SEG_15 SEGMENT USE16 PARA PUBLIC 'CODE'
 			      C     org offset PerformSingleFadeStep
  0C68  C3		      C     retn
-			      C 
- 0C69			      C SEG_15 ENDS
+			      C     PATCH_CODE_END
+ 0C69			     1C     SEG_15 ENDS
 			      C 
 
 				    ; Fix HDD size/display limit
@@ -18002,8 +18030,10 @@ patch.asm						     Page 1 - 1
 			      C 
 			      C IFDEF CalculateHDDSize_BUGGY1
 			      C 
+			      C     MESSAGE HDDFIX, 'Fixing HDD Size Calculation bug #1'
 			      C ; Jan Steunebrink HDD calculation fix
- 0C69			      C SEG_15 SEGMENT USE16 PARA PUBLIC 'CODE'
+			      C     PATCH_CODE_START
+ 0C69			     1C     SEG_15 SEGMENT USE16 PARA PUBLIC 'CODE'
 			      C     ORG offset CalculateHDDSize_BUGGY1
  56B6  51		      C     push cx
  56B7  8A 86 0096	      C     mov al, [bp+96h]
@@ -18017,8 +18047,8 @@ patch.asm						     Page 1 - 1
  56CF  F7 F1		      C     div cx
  56D1  89 86 009C	      C     mov [bp+9ch], ax
  56D5  59		      C     pop cx
- 56D6			      C SEG_15 ENDS
-			      C 
+			      C     PATCH_CODE_END
+ 56D6			     1C     SEG_15 ENDS
 			      C ENDIF
 			      C 
 
@@ -18039,6 +18069,7 @@ patch.asm						     Page 1 - 1
  20FA			     1C SEG_15 SEGMENT USE16 PARA PUBLIC 'CODE'
  210C			     1C orig_DoCalc:
  210C			     1C SEG_15 ENDS
+			      C     MESSAGE 5x86, 'Fixing CalculateBusSpeed for x4 Multi'
 			      C 
 			      C     PATCH_CODE_START
  210C			     1C     SEG_15 SEGMENT USE16 PARA PUBLIC 'CODE'
@@ -18083,6 +18114,7 @@ patch.asm						     Page 1 - 1
 			      C ; to apply this ID somewhere, if your BIOS
 			      C ; doesn't have a known entry to wedge support into
 			      C IFDEF CPU_5X86_STRING_TABLE_INDEX
+			      C     MESSAGE 5x86, 'Adding Am5x86 string to table'
 			      C     PATCH_CODE_START
  0099			     1C     SEG_15 SEGMENT USE16 PARA PUBLIC 'CODE'
 			      C 
@@ -18099,12 +18131,29 @@ patch.asm						     Page 1 - 1
 			      C ENDIF 
 			      C 
 			      C ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+			      C ; In case the BIOS has a buggy option to disable Internal Cache WB/WT setting
+			      C IFDEF MenuChipsetSetup_CMOSIsWBCPU_Buggy
+			      C     MESSAGE 5x86, 'Fixing menu option hiding'
+			      C     PATCH_CODE_START
+ E007			     1C     SEG_15 SEGMENT USE16 PARA PUBLIC 'CODE'
+			      C     ORG offset MenuChipsetSetup_CMOSIsWBCPU_Buggy
+ 8E94  B0 BF		      C     mov al, 0BFh
+ 8E96  E8 5AF1		      C     call ReadCMOSByte
+ 8E99  24 08		      C     and al, 08h
+ 8E9B  3C 08		      C     cmp al, 08h
+ 8E9D  C3		      C     retn
+			      C     PATCH_CODE_END
+ 8E9E			     1C     SEG_15 ENDS
+			      C ENDIF
+			      C 
+			      C ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 			      C ; In case an incomplete extended AMD CPU check exists, update it
 			      C 
 			      C IFDEF FinalizeCPUSetup_IncompleteAMDCheck
+			      C     MESSAGE 5x86, 'Fixing incomplete AMD CPU detection in CMOS 3D/3F Finalization'
 			      C 
 			      C     PATCH_CODE_START
- E007			     1C     SEG_15 SEGMENT USE16 PARA PUBLIC 'CODE'
+ 8E9E			     1C     SEG_15 SEGMENT USE16 PARA PUBLIC 'CODE'
 			      C 
 			      C     ORG offset CODECAVE_ROMCopyright1
  E007			      C AMDCheck5x86:
@@ -18143,13 +18192,15 @@ patch.asm						     Page 1 - 1
 			      C ENDIF
 			      C 
 
+
 				    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				    ; BIOS INFO / Copyright string
 				    PATCH_CODE_START
  83B0			     1	    SEG_15 SEGMENT USE16 PARA PUBLIC 'CODE'
 
+
 				    ORG offset Str_BiosInfo
- E0C1  10 E108 R		    S_CallRoutine <, offset SetCyan>
+ E0C1  10 E109 R		    S_CallRoutine <, offset SetCyan>
  E0C4  53 6F 79 6F 20 53	    db 'Soyo SY-025L Mod Bios (C) 2026 E. Voirin (oerg866)'
        59 2D 30 32 35 4C
        20 4D 6F 64 20 42
@@ -18160,22 +18211,22 @@ patch.asm						     Page 1 - 1
        6F 65 72 67 38 36
        36 29
  E0F6  0B			    db V_NEWLINE
- E0F7  56 30 2E 36 20 28	    db 'V0.6 (', STRINGIFY(@Date), ')'
-       30 38 2F 31 30 2F
-       32 36 29
- E106  08			    db V_NORMAL
- E107  00			    db 0
+ E0F7  56 30 2E 36 61 20	    db 'V0.6a (', STRINGIFY(@Date), ')'
+       28 30 38 2F 31 30
+       2F 32 36 29
+ E107  08			    db V_NORMAL
+ E108  00			    db 0
 				    
- E108				SetCyan:
- E108  C6 86 0080 0B		    mov byte ptr [bp+BP_TextAttr], 00Bh
- E10D  C3			    retn
+ E109				SetCyan:
+ E109  C6 86 0080 0B		    mov byte ptr [bp+BP_TextAttr], 00Bh
+ E10E  C3			    retn
 
 				    PATCH_CODE_END
- E10E			     1	    SEG_15 ENDS
+ E10F			     1	    SEG_15 ENDS
 
 				    END
 				    
-Microsoft (R) Macro Assembler Version 6.14.8444		    08/10/26 01:05:33
+Microsoft (R) Macro Assembler Version 6.14.8444		    08/10/26 06:13:38
 patch.asm						     Symbols 2 - 1
 
 
@@ -18332,6 +18383,7 @@ ColorStyle_Default . . . . . . .	L Near	 284B	  SEG_15
 DisableAOBFIrq_Execute . . . . .	L Near	 E6BC	  SEG_15	
 DisableAOBFIrq_SkipSuccess . . .	L Near	 E6C5	  SEG_15	
 DisableAOBFIrq . . . . . . . . .	L Near	 E6BA	  SEG_15	
+DisableMenuItem  . . . . . . . .	L Near	 3DB8	  SEG_15	
 DispStr_CRLF . . . . . . . . . .	L Near	 27D0	  SEG_15	
 DispStr_CR . . . . . . . . . . .	L Near	 27EC	  SEG_15	
 DispStr_LF . . . . . . . . . . .	L Near	 27D7	  SEG_15	
@@ -18414,7 +18466,7 @@ Int15h_C2_WaitAck_GenericError .	L Near	 0013	  SEG_15
 Int15h_C2_WaitAck_NoReturnOnError 	L Near	 0037	  SEG_15	
 Int15h_C2_WaitAck_Success  . . .	L Near	 001E	  SEG_15	
 Int15h_C2_WaitAck  . . . . . . .	L Near	 0000	  SEG_15	
-Int15h_ContinueProcessing  . . .	L Near	 D941	  SEG_15	
+Int15h_ContinueProcessing  . . .	L Near	 D945	  SEG_15	
 Int15h_Handler . . . . . . . . .	L Near	 D920	  SEG_15	
 Int15h_MouseFunction . . . . . .	L Near	 E595	  SEG_15	
 Int15h_MousePresent  . . . . . .	L Near	 E5A4	  SEG_15	
@@ -18424,6 +18476,7 @@ KBC_Aux_Code_Resend  . . . . . .	Number	 00FEh
 KBC_Aux_Code_SelfTestOK  . . . .	Number	 00AAh	 
 KBC_DataPort . . . . . . . . . .	Number	 0060h	 
 KBC_WriteCMD . . . . . . . . . .	Number	 0060h	 
+MenuChipsetSetup_CMOSIsWBCPU_Buggy .	L Near	 8E94	  SEG_15	
 Menu_BiosFeaturesSetup . . . . .	L Near	 280D	  SEG_15	
 Menu_ChipsetFeaturesSetup  . . .	L Near	 2813	  SEG_15	
 Menu_PciConfigurationSetup . . .	L Near	 281F	  SEG_15	
@@ -18490,8 +18543,8 @@ Mouse_DriverFarCallFlag  . . . .	Number	 0080h
 Mouse_FarCallOffset  . . . . . .	Number	 0022h	 
 Mouse_FarCallSegment . . . . . .	Number	 0024h	 
 Mouse_PacketSizeFlags  . . . . .	Number	 0027h	 
-NoC1 . . . . . . . . . . . . . .	L Near	 D939	  SEG_15	
-NoC2 . . . . . . . . . . . . . .	L Near	 D941	  SEG_15	
+NoC1 . . . . . . . . . . . . . .	L Near	 D93B	  SEG_15	
+NoC2 . . . . . . . . . . . . . .	L Near	 D945	  SEG_15	
 NotX4  . . . . . . . . . . . . .	L Near	 0094	  SEG_15	
 OutPort16  . . . . . . . . . . .	L Near	 109E	  SEG_15	
 Out_8042_Aux_And_WaitAck_NoReturnOnError . L Near   0032     SEG_15	
@@ -18509,6 +18562,7 @@ ReadAuxData_Error  . . . . . . .	L Near	 002E	  SEG_15
 ReadAuxData_NoReturnOnError  . .	L Near	 0029	  SEG_15	
 ReadAuxData_ReturnInstruction  .	L Near	 0028	  SEG_15	
 ReadAuxData  . . . . . . . . . .	L Near	 0023	  SEG_15	
+ReadCMOSByte_2 . . . . . . . . .	L Near	 9A26	  SEG_15	
 ReadCMOSByte . . . . . . . . . .	L Near	 E98A	  SEG_15	
 Reboot . . . . . . . . . . . . .	L Near	 E3D4	  SEG_15	
 RoundOffClock  . . . . . . . . .	L Near	 2122	  SEG_15	
@@ -18517,7 +18571,7 @@ STR_None . . . . . . . . . . . .	Text   	 'None'
 STR_User . . . . . . . . . . . .	Text   	 'User'
 SendCommandToKBC . . . . . . . .	L Near	 D8DA	  SEG_15	
 SetCursorPosition  . . . . . . .	L Near	 2718	  SEG_15	
-SetCyan  . . . . . . . . . . . .	L Near	 E108	  SEG_15	
+SetCyan  . . . . . . . . . . . .	L Near	 E109	  SEG_15	
 SetPaletteEntry  . . . . . . . .	L Near	 0BA2	  SEG_15	
 SetupMouse_SetIRQ12Handler . . .	L Near	 8543	  SEG_15	
 SetupMouse . . . . . . . . . . .	L Near	 84FC	  SEG_15	
