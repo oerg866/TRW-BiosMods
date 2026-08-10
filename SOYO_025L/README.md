@@ -11,6 +11,10 @@ Based on BIOS Revision **G3** (`03/08/95-SIS-85C471B/E/G-2C4I9S21-00`)
 | ![Screenshot](image.png) | ![Screenshot](image-1.png) | ![Screenshot](image-2.png) |
 
 # Changelog
+## v0.6a
+  - Fix a crash due to the PS/2 Int15h handler
+  - Fix Internal Cache WB/WT option being hidden with 5x86 CPUs
+
 ## v0.6
 
 - Initial release
